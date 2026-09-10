@@ -50,3 +50,10 @@ Orçamentos versionados (V06), consignações por parceiro/remessa/produto e fin
 
 ## Sequência de implantação
 Validar telas/hipóteses → reconciliar GitHub e preparar aplicação definitiva → banco/permissões/transações → testes de regras críticas e recuperação → piloto com poucos registros → importação conferida e migração autorizada. Aprovar protótipo não equivale a sistema pronto para operação.
+
+## Etapa 2 — Ficha editável
+Implementada ficha independente da demonstração, com nome, vários filamentos, consumo por lote em gramas, preço por kg, quantidade do lote, horas, potência em W, energia/kWh, máquina/hora, trabalho manual em minutos, acabamento/embalagem por peça, reserva percentual de material, comissão, pagamento, impostos, tarifa fixa/frete por peça e margem. Preço pretendido opcional permite avaliar contribuição e margem efetiva.
+
+Uma ficha pode ser salva explicitamente no navegador e recuperada ao recarregar. Não é catálogo, banco ou sincronização; salvar substitui a ficha anterior. Rascunhos ficam durante a navegação interna. Dados vazios bloqueiam cálculo, sem assumir zero. Ainda não há importação de fatiador/planilha. Pedidos de demonstração permanecem independentes.
+
+Validação: TypeScript e cálculo automatizado (lote, conversões, valores vazios/negativos, margem+taxas >=100%, vírgula decimal, preço com taxas); navegador confirmou exemplo 8,74/13,44, vazio bloqueado e ficha recuperada após salvar/recarregar. Demais achados de usabilidade da versão 1 continuam no relatório.

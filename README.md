@@ -17,3 +17,6 @@ O script de build adia em 500 ms a saída do Vinext no Windows para permitir o e
 - Ferramenta opcional WebMCP `read_demo_order` consulta o estado sem escrita. Sem contexto WebMCP disponível para validar registro e execução; não verificada em navegador.
 
 Ver ESCOPO-V1.md para limites e roteiro de revisão.
+
+## Etapa 2 — Ficha editável
+A tela Produtos e custos permite preencher a ficha e salvar explicitamente uma ficha no armazenamento local do navegador. Pedidos fictícios não recebem seus dados. Validações numéricas, taxas, margem e salvamento/recuperação foram conferidos. Não há upload/importação ou banco. Rascunho não salvo é perdido ao recarregar.
