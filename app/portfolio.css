@@ -21,7 +21,7 @@
 .portfolio-image img{width:100%;height:100%;object-fit:cover;display:block}
 .portfolio-placeholder{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#758790;font-size:13px}
 .portfolio-card-body{padding:20px}
-.portfolio-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.portfolio-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .portfolio-card-top small{font-size:12px;color:#657480}
 .stock-chip{border-radius:999px;padding:5px 8px;font-weight:700;white-space:nowrap}
 .stock-chip.available{background:#e3f2eb;color:#17694f}
