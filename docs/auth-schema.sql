@@ -12,7 +12,8 @@ revoke all on public.farm_profiles from anon, authenticated;
 grant select on public.farm_profiles to authenticated;
 create table farm_private.bootstrap_admin(email text primary key);
 alter table farm_private.bootstrap_admin enable row level security;
-insert into farm_private.bootstrap_admin values ('rfelixtrigueiro@gmail.com');
+-- Configure the first administrator directly in the protected table.
+-- Do not commit a real e-mail address to a public repository.
 create function farm_private.sync_profile() returns trigger language plpgsql security definer set search_path='' as $$
 declare bootstrap boolean := false;
 begin
