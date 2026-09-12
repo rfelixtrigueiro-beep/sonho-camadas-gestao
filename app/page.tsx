@@ -1,2 +1,2 @@
-import Demo from './demo';
-export default function Page(){return <Demo/>}
+import Auth from './auth';
+export default function Page(){return <Auth/>}
