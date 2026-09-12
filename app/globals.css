@@ -140,3 +140,88 @@ body{margin:0;font-family:Arial,sans-serif;font-size:16px}button,input{font:inhe
 /* Account access */
 .auth-page{min-height:100vh;display:grid;place-items:center;padding:24px;background:#102f30}
 .auth-card{width:min(100%,440px);padding:32px!important}.auth-card img{display:block;margin:0 auto 22px}.auth-card h1{font-size:28px}.auth-card form{display:grid;gap:16px;margin:24px 0}.auth-card input{width:100%}.auth-card>button{margin:8px 8px 0 0}.account-bar{display:flex;justify-content:space-between;align-items:center;padding:12px 24px;gap:12px;background:#f3f6f5;border-bottom:1px solid #ccd8d5;flex-wrap:wrap}.users-panel{max-width:1000px;margin:24px auto!important}.user-row{padding:20px 0;border-bottom:1px solid #ddd;display:flex;gap:18px;justify-content:space-between;flex-wrap:wrap}.user-row p{overflow-wrap:anywhere}.auth-card button{min-height:44px}
+
+/* Experiência responsiva para uso diário */
+html{scroll-behavior:smooth;background:#eef3f4}
+*,*::before,*::after{box-sizing:border-box}
+body{background:linear-gradient(180deg,#f7f9fb 0,#eef3f4 100%);color:#172a39;min-height:100vh}
+::selection{background:#d8b45f;color:#183338}
+button,input,select{transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease,transform .18s ease}
+button:not(:disabled):active{transform:translateY(1px)}
+button:not([data-slot]){min-height:44px}
+input,select{min-height:46px;font-size:16px}
+input:hover,select:hover{border-color:#8ca3ad}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid rgba(211,152,36,.42);outline-offset:2px}
+.app-header{position:sticky;top:0;z-index:20;height:68px;background:rgba(255,255,255,.94);backdrop-filter:blur(12px);box-shadow:0 1px 0 #dce3e9}
+.app-header [data-sidebar=trigger]{width:40px;height:40px;border-radius:10px;color:#173f49}
+.crumb strong{font-weight:700;color:#173f49}
+.mobile-nav{display:none}
+.canvas{max-width:1400px}
+.heading{padding-top:2px}
+.heading h1{font-size:clamp(29px,3vw,38px);line-height:1.12}
+.heading>div>p:last-child{margin-bottom:0}
+.demo-note{display:flex;align-items:flex-start;gap:11px;border:1px solid #ead8ad;border-left:4px solid #d39a2c;border-radius:10px;padding:13px 15px;background:#fff9eb;line-height:1.55}
+.demo-note svg{flex:0 0 auto;color:#966b16;margin-top:1px}
+.metrics article,.panel,.portfolio-card{box-shadow:0 8px 30px rgba(27,57,68,.055)}
+.metrics article{border-top:3px solid #d7b45d;padding-top:21px}
+.panel{border-color:#d7e1e5}
+.table-scroll{overflow-x:auto;border:1px solid #e1e8eb;border-radius:10px;margin-top:12px;scrollbar-width:thin}
+.table-scroll table{min-width:640px}
+.table-scroll:focus-visible{outline:3px solid rgba(211,152,36,.42);outline-offset:2px}
+.account-bar{min-height:64px;background:#fff;padding:10px 24px;box-shadow:0 1px 0 #d5e0df}
+.account-identity{display:flex;align-items:center;gap:11px;min-width:0}
+.account-identity>span:last-child{display:grid;gap:2px;min-width:0}
+.account-identity strong{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px}
+.account-identity small{font-size:12px;color:#60747c}
+.account-avatar{display:grid;place-items:center;width:38px;height:38px;flex:0 0 auto;border-radius:11px;background:#143f42;color:#fff;font-weight:800}
+.account-actions{display:flex;align-items:center;gap:8px}
+.account-actions button{min-height:40px!important;padding:8px 13px!important}
+.global-alert{margin:12px auto;padding:12px 16px;max-width:900px;background:#fff0ef;color:#8f3030;border-radius:8px}
+.users-panel{margin:28px auto!important;width:min(calc(100% - 32px),1000px)}
+[data-slot=sidebar-menu-button][data-active=true]{box-shadow:inset 3px 0 0 #e1b753;background:#28545c}
+[data-slot=sidebar-menu-button] svg{width:19px;height:19px}
+@media(min-width:768px){.account-bar{padding-left:calc(16rem + 24px)}}
+
+@media(max-width:767px){
+ .account-bar{padding:9px 12px;min-height:60px;flex-wrap:nowrap}
+ .account-identity{max-width:calc(100% - 112px)}
+ .account-identity strong{max-width:46vw;font-size:13px}
+ .account-actions{gap:5px}
+ .account-actions button{padding:7px 10px!important;font-size:12px!important}
+ .app-header{height:58px;padding:0 13px}
+ .app-header .demo-pill{padding:6px 9px}
+ .crumb{gap:7px;font-size:13px}
+ .crumb>span{display:none}
+ .mobile-nav{position:sticky;top:58px;z-index:19;display:flex;gap:5px;overflow-x:auto;padding:8px 10px;background:rgba(255,255,255,.96);border-bottom:1px solid #dce3e9;scrollbar-width:none;overscroll-behavior-x:contain}
+ .mobile-nav::-webkit-scrollbar{display:none}
+ .mobile-nav button{flex:0 0 auto;display:flex;align-items:center;gap:6px;min-height:39px!important;padding:8px 11px!important;border-radius:9px!important;background:#f2f6f6!important;color:#405c63!important;border:1px solid transparent!important;font-size:12px!important}
+ .mobile-nav button svg{width:16px;height:16px}
+ .mobile-nav button.active{background:#163f45!important;color:#fff!important;box-shadow:0 4px 12px rgba(20,63,69,.2)}
+ .canvas{padding:22px 14px 28px}
+ .heading{margin-bottom:18px}
+ .heading .secondary{width:100%}
+ .demo-note{font-size:13px}
+ .notice{min-height:22px;padding-top:4px}
+ .metrics{grid-template-columns:1fr 1fr}
+ .metrics article{padding:16px}
+ .metrics article p{margin-bottom:10px}
+ .metrics article strong{font-size:24px}
+ .panel{margin-bottom:16px}
+ .actions button{min-height:46px}
+ .users-panel{margin:16px auto!important;width:calc(100% - 24px)}
+ .user-row .actions{display:grid;width:100%}
+ .user-row .actions button{width:100%}
+ footer{padding-bottom:30px}
+}
+@media(max-width:420px){
+ .metrics{grid-template-columns:1fr}
+ .metrics article{display:grid;grid-template-columns:1fr auto;column-gap:12px;align-items:center}
+ .metrics article p,.metrics article small{grid-column:1}
+ .metrics article strong{grid-column:2;grid-row:1/3;text-align:right}
+ .compact{grid-template-columns:1fr 1fr}
+ .compact article{display:block}
+ .compact article strong{font-size:22px}
+ .demo-pill{font-size:10px}
+ .brand.official-brand img{width:145px}
+}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}

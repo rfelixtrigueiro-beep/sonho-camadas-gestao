@@ -5,12 +5,16 @@
 .portfolio-search input{padding-left:44px;margin:0}
 .category-list{display:flex;gap:8px;flex-wrap:wrap}
 .filter-label{font-size:13px;font-weight:700;color:#445b65;margin:0 0 9px}
+.filter-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}
+.filter-heading .filter-label{margin:0}
+.clear-filters{background:transparent!important;color:#126454!important;border:0!important;padding:5px 2px!important;min-height:auto!important;font-size:13px!important}
 .stock-filter{font-size:13px;color:#445b65}
 .stock-filter select{display:block;width:100%;height:43px;margin-top:7px;border:1px solid #bdcbd4;border-radius:8px;background:#fff;color:#173441;padding:0 10px;font:inherit}
 .export-button{height:43px;margin-bottom:0}
 .category-list button.category{background:#fff;color:#31505a;border:1px solid #cdd9de;border-radius:999px;padding:8px 13px;font-weight:600}
 .category-list button.category.active{background:#153c46;color:#fff;border-color:#153c46}
 .portfolio-count{font-size:13px;color:#657480;margin:14px 0 18px}
+.portfolio-count strong{font-size:15px;color:#173441}
 .portfolio-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
 .portfolio-card{overflow:hidden;background:#fff;border:1px solid #dce3e9;border-radius:14px;min-width:0;box-shadow:0 8px 24px rgba(20,47,57,.05)}
 .portfolio-image{aspect-ratio:4/3;background:#e8eeef;overflow:hidden}
@@ -19,6 +23,9 @@
 .portfolio-card-body{padding:20px}
 .portfolio-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
 .portfolio-card-top small{font-size:12px;color:#657480}
+.stock-chip{border-radius:999px;padding:5px 8px;font-weight:700;white-space:nowrap}
+.stock-chip.available{background:#e3f2eb;color:#17694f}
+.stock-chip.empty{background:#fff0ef;color:#9a3737}
 .portfolio-card h2{font-size:19px;margin-bottom:9px}
 .portfolio-card p{font-size:13px;line-height:1.55;color:#657480;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;min-height:60px}
 .portfolio-meta{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-top:18px;padding-top:14px;border-top:1px solid #e4e9ed}
@@ -35,6 +42,8 @@
 .portfolio-form{margin-top:10px}
 .portfolio-form select{display:block;width:100%;border:1px solid #bdcbd4;border-radius:8px;padding:12px;background:#fff;margin:9px 0 16px;color:#173441;min-height:46px}
 .portfolio-form input[type=file]{padding:9px}
+.field-hint{display:block;margin-top:-10px;color:#657480;font-weight:400;font-size:12px}
+.form-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .category-manager form{display:grid;grid-template-columns:minmax(220px,1fr) auto;gap:12px;align-items:end;max-width:680px}
 .category-manager form input{margin-bottom:0}
 .category-manager form button{min-height:46px}
@@ -47,4 +56,4 @@
 .hidden-product{opacity:.72;border-style:dashed}
 .hidden-product .portfolio-image{filter:grayscale(.65)}
 @media(max-width:850px){.portfolio-filter-row{grid-template-columns:1fr 1fr}.portfolio-search{max-width:none;grid-column:1/-1}}
-@media(max-width:600px){.portfolio-grid{grid-template-columns:1fr}.portfolio-card p{min-height:0}.portfolio-meta{align-items:center}.portfolio-admin-actions{align-items:stretch;flex-direction:column}.portfolio-admin-buttons{display:grid}.portfolio-admin-buttons button{width:100%}.category-manager form{grid-template-columns:1fr}.portfolio-choice{align-items:flex-start;flex-direction:column}.portfolio-filter-row{grid-template-columns:1fr}.portfolio-search{grid-column:auto}.export-button{width:100%}}
+@media(max-width:600px){.portfolio-grid{grid-template-columns:1fr;gap:12px}.portfolio-card{display:grid;grid-template-columns:112px minmax(0,1fr);border-radius:12px}.portfolio-image{aspect-ratio:auto;height:100%;min-height:184px}.portfolio-placeholder{font-size:12px;text-align:center;padding:8px}.portfolio-placeholder svg{width:26px}.portfolio-card-body{padding:15px}.portfolio-card h2{font-size:17px;margin-bottom:6px}.portfolio-card p{min-height:0}.portfolio-card-top{align-items:flex-start;flex-direction:column;margin-bottom:10px}.portfolio-meta{align-items:flex-start;flex-direction:column;gap:5px;margin-top:12px;padding-top:10px}.portfolio-meta strong{font-size:18px}.portfolio-meta span{text-align:left}.visibility-button{font-size:12px!important;padding:9px 8px!important}.portfolio-admin-actions{align-items:stretch;flex-direction:column}.portfolio-admin-buttons{display:grid}.portfolio-admin-buttons button{width:100%}.category-manager form{grid-template-columns:1fr}.portfolio-choice{align-items:flex-start;flex-direction:column}.portfolio-filter-row{grid-template-columns:1fr}.portfolio-search{grid-column:auto}.export-button{width:100%}.form-actions{display:grid}.form-actions button{width:100%}}
