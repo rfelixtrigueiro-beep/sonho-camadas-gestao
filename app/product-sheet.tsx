@@ -133,7 +133,7 @@ export default function ProductSheet({userId}:{userId:string}){
   const notes=`Criado pela calculadora. Custo por unidade: ${money(result.unit)}. Lote calculado: ${sheet.batch} peça(s). Impressora: ${sheet.printerName}.${supplies?` Insumos: ${supplies}.`:''}`;
   const {error:productError}=await supabase.from('farm_portfolio_products').insert({airtable_record_id:id,nome:sheet.name.trim(),categoria:null,categoria_id:null,preco_venda:price,tempo_producao_h:number(sheet.hours),estoque:0,ativo:true,observacoes:notes,exibir_portfolio:false,foto_urls:[]});
   if(productError){setStatus('A ficha foi salva, mas o produto não pôde ser criado no Portfólio. Tente novamente.');setSaving(false);return}
-  localStorage.removeItem(key);setSaved(true);setStatus('Produto salvo e criado no Portfólio como não publicado.');setSaving(false);
+  localStorage.removeItem(key);setSaved(true);setStatus('Produto salvo, criado no Portfólio como não publicado e adicionado ao Estoque com saldo zero.');setSaving(false);
  }
 
  async function clearSheet(){

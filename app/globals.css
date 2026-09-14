@@ -229,3 +229,4 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid 
 }
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 .notice{display:block}
+.inventory-heading-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.inventory-heading-actions button{min-height:38px!important;padding:7px 11px!important}.inventory-hidden-label{display:block;color:#8a641d;margin-top:5px;font-size:11px}@media(max-width:600px){.inventory-heading-actions{width:100%}.inventory-heading-actions button{flex:1}}
