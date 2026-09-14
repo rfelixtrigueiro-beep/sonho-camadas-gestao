@@ -2,7 +2,7 @@ name: Publicar no GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   workflow_dispatch:
 
 permissions:
@@ -18,25 +18,53 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Baixar o projeto
+      - name: Baixar a versão de produção
         uses: actions/checkout@v6
+        with:
+          ref: main
+          path: production
+      - name: Baixar a versão de desenvolvimento
+        uses: actions/checkout@v6
+        with:
+          ref: develop
+          path: development
       - name: Preparar Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
-      - name: Instalar dependências
+          cache-dependency-path: |
+            production/package-lock.json
+            development/package-lock.json
+      - name: Instalar dependências de produção
         run: npm ci
+        working-directory: production
+      - name: Instalar dependências de desenvolvimento
+        run: npm ci
+        working-directory: development
       - name: Preparar GitHub Pages
         uses: actions/configure-pages@v5
-      - name: Gerar o site
+      - name: Gerar a versão de produção
         run: npm run build
+        working-directory: production
         env:
           GITHUB_PAGES: 'true'
-      - name: Enviar arquivos do site
+          GITHUB_PAGES_BASE: /sonho-camadas-gestao/
+      - name: Gerar a versão de desenvolvimento
+        run: npm run build
+        working-directory: development
+        env:
+          GITHUB_PAGES: 'true'
+          GITHUB_PAGES_BASE: /sonho-camadas-gestao/desenvolvimento/
+      - name: Montar as duas versões
+        run: |
+          mkdir -p site/desenvolvimento
+          cp -R production/dist/client/. site/
+          cp -R development/dist/client/. site/desenvolvimento/
+      - name: Enviar as versões para publicação
         uses: actions/upload-pages-artifact@v4
         with:
-          path: dist/client
+          path: site
 
   deploy:
     environment:
