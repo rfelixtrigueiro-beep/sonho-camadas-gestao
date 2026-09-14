@@ -1,6 +1,6 @@
 'use client';
+/* oxlint-disable next/no-img-element */
 import {useEffect,useState} from 'react';
-import Image from 'next/image';
 import ProductSheet from './product-sheet';
 import Portfolio from './portfolio';
 import Inventory from './inventory';
@@ -10,7 +10,7 @@ import {SidebarProvider,Sidebar,SidebarContent,SidebarHeader,SidebarFooter,Sideb
 const nav=[['Visão geral',LayoutDashboard],['Produtos e custos',Package],['Pedidos',ReceiptText],['Produção',Printer],['Estoque',Boxes],['Recebimentos',Wallet],['Portfólio',Images]] as const;
 const descriptions=['Acompanhe e organize as atividades da Farm.','Calcule custos e crie produtos.','Consulte e gerencie os pedidos.','Acompanhe os itens em produção.','Consulte o saldo dos produtos.','Acompanhe os valores recebidos.','Consulte e organize os produtos disponíveis.'];
 
-function Menu({page,go,administrator}:{page:number;go:(v:number)=>void;administrator:boolean}){const {setOpenMobile}=useSidebar();return <Sidebar><SidebarHeader><div className="brand official-brand"><Image src="/brand/Logo_Otimizada_Preta.png" alt="Sonho em Camadas 3D — Ideias que ganham forma" width={180} height={178}/><small>GESTÃO DA FARM</small></div></SidebarHeader><SidebarContent><SidebarMenu>{nav.map(([label,Icon],i)=>!administrator&&(i===1||i===3||i===4)?null:<SidebarMenuItem key={label}><SidebarMenuButton isActive={page===i} onClick={()=>{go(i);setOpenMobile(false)}}><Icon/><span>{label}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu></SidebarContent><SidebarFooter><div className="workspace"><span className="avatar">SC</span><div>Sonho em Camadas 3D<small>Sistema de gestão</small></div></div></SidebarFooter></Sidebar>}
+function Menu({page,go,administrator}:{page:number;go:(v:number)=>void;administrator:boolean}){const {setOpenMobile}=useSidebar();return <Sidebar><SidebarHeader><div className="brand official-brand"><img src="brand/Logo_Otimizada_Preta.png" alt="Sonho em Camadas 3D — Ideias que ganham forma" width="180" height="178"/><small>GESTÃO DA FARM</small></div></SidebarHeader><SidebarContent><SidebarMenu>{nav.map(([label,Icon],i)=>!administrator&&(i===1||i===3||i===4)?null:<SidebarMenuItem key={label}><SidebarMenuButton isActive={page===i} onClick={()=>{go(i);setOpenMobile(false)}}><Icon/><span>{label}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu></SidebarContent><SidebarFooter><div className="workspace"><span className="avatar">SC</span><div>Sonho em Camadas 3D<small>Sistema de gestão</small></div></div></SidebarFooter></Sidebar>}
 
 function EmptyModule({icon:Icon,title,text}:{icon:typeof ReceiptText;title:string;text:string}){return <section className="panel"><div className="empty"><Icon size={34}/><h2>{title}</h2><p>{text}</p></div></section>}
 
