@@ -21,6 +21,7 @@ const groups=[
 ];
 
 export default function ProductSheet({userId}:{userId:string}){
+ const draftKey=`farm.productSheetDraft.${userId}`;
  const [sheet,setSheet]=useState<Sheet>(blank);
  const [catalog,setCatalog]=useState<CatalogSupply[]>([]);
  const [printers,setPrinters]=useState<CatalogPrinter[]>([]);
@@ -51,12 +52,15 @@ export default function ProductSheet({userId}:{userId:string}){
     setCatalog(suppliesResult.error?[]:sortByStatusAndName([...(suppliesResult.data||[])] as CatalogSupply[]));
     setPrinters(printersResult.error?[]:sortByStatusAndName([...(printersResult.data||[])] as CatalogPrinter[]));
    }
-   const restored=normalizeSheet(sheetResult.data?.sheet);
-   if(restored){if(live){setSheet(restored);setSaved(false);setStatus(suppliesResult.error||printersResult.error?'Ficha recuperada, mas algum cadastro não pôde ser carregado.':'Ficha, insumos e impressoras carregados.')}localStorage.removeItem(key)}
+   const storedDraft=sessionStorage.getItem(draftKey);const draft=storedDraft?normalizeSheet(JSON.parse(storedDraft)):null;
+   const restored=draft||normalizeSheet(sheetResult.data?.sheet);
+   if(restored){if(live){setSheet(restored);setSaved(false);setStatus(draft?'Rascunho recuperado nesta janela.':suppliesResult.error||printersResult.error?'Ficha recuperada, mas algum cadastro não pôde ser carregado.':'Ficha, insumos e impressoras carregados.')}localStorage.removeItem(key)}
    else{const legacy=localStorage.getItem(key);const parsed=legacy?normalizeSheet(JSON.parse(legacy)):null;if(parsed&&live){setSheet(parsed);setStatus('Encontramos sua ficha anterior. Revise os dados antes de salvar.')}else if(live)setStatus('Preencha uma nova ficha.')}
   }catch{if(live)setStatus('Não foi possível carregar a ficha. Tente novamente.')}
   finally{if(live)setLoaded(true)}
- })();return()=>{live=false}},[userId]);
+ })();return()=>{live=false}},[userId,draftKey]);
+
+ useEffect(()=>{if(loaded&&!saved)sessionStorage.setItem(draftKey,JSON.stringify(sheet))},[draftKey,loaded,saved,sheet]);
 
  const change=(k:keyof Sheet,v:string)=>{setSheet(current=>({...current,[k]:v}));setSaved(false);setStatus('Alterações ainda não salvas.')};
  const changeSupplies=(supplies:SupplyUse[])=>{setSheet(current=>({...current,supplies}));setSaved(false);setStatus('Alterações ainda não salvas.')};
@@ -133,11 +137,11 @@ export default function ProductSheet({userId}:{userId:string}){
   const notes=`Criado pela calculadora. Custo por unidade: ${money(result.unit)}. Lote calculado: ${sheet.batch} peça(s). Impressora: ${sheet.printerName}.${supplies?` Insumos: ${supplies}.`:''}`;
   const {error:productError}=await supabase.from('farm_portfolio_products').insert({airtable_record_id:id,nome:sheet.name.trim(),categoria:null,categoria_id:null,preco_venda:price,tempo_producao_h:number(sheet.hours),estoque:0,ativo:true,observacoes:notes,exibir_portfolio:false,foto_urls:[]});
   if(productError){setStatus('A ficha foi salva, mas o produto não pôde ser criado no Portfólio. Tente novamente.');setSaving(false);return}
-  localStorage.removeItem(key);setSaved(true);setStatus('Produto salvo, criado no Portfólio como não publicado e adicionado ao Estoque com saldo zero.');setSaving(false);
+  localStorage.removeItem(key);sessionStorage.removeItem(draftKey);setSaved(true);setStatus('Produto salvo, criado no Portfólio como não publicado e adicionado ao Estoque com saldo zero.');setSaving(false);
  }
 
  async function clearSheet(){
-  if(saving)return;setSaving(true);const cleared=structuredClone(blank);setSheet(cleared);setSaved(false);localStorage.removeItem(key);
+  if(saving)return;setSaving(true);const cleared=structuredClone(blank);setSheet(cleared);setSaved(false);localStorage.removeItem(key);sessionStorage.setItem(draftKey,JSON.stringify(cleared));
   const {error}=await supabase.from('farm_product_sheets').upsert({id:userId,sheet:cleared,updated_at:new Date().toISOString()},{onConflict:'id'});
   setStatus(error?'A tela foi limpa, mas a ficha anterior pode reaparecer ao entrar novamente. Nenhum produto foi criado.':'Calculadora limpa. Nenhum produto foi criado no Portfólio.');setSaving(false);
  }

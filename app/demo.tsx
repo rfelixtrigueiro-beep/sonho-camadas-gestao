@@ -28,5 +28,5 @@ export default function Demo({administrator,userId}:{administrator:boolean;userI
  {administrator&&page===3&&<EmptyModule icon={Printer} title="Nenhuma produção em andamento" text="As ordens de produção aparecerão aqui."/>}
  {administrator&&page===4&&<Inventory/>}
  {page===5&&<EmptyModule icon={Wallet} title="Nenhum recebimento cadastrado" text="Os recebimentos dos pedidos aparecerão aqui."/>}
- {page===6&&<Portfolio administrator={administrator}/>}<footer>SONHO EM CAMADAS 3D <span>Sistema de gestão</span></footer></div></main></SidebarProvider>;
+ <div hidden={page!==6}><Portfolio administrator={administrator} userId={userId}/></div><footer>SONHO EM CAMADAS 3D <span>Sistema de gestão</span></footer></div></main></SidebarProvider>;
 }
