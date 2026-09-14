@@ -49,6 +49,7 @@
 .portfolio-form select{display:block;width:100%;border:1px solid #bdcbd4;border-radius:8px;padding:12px;background:#fff;margin:9px 0 16px;color:#173441;min-height:46px}
 .portfolio-form input[type=file]{padding:9px}
 .field-hint{display:block;margin-top:-10px;color:#657480;font-weight:400;font-size:12px}
+.portfolio-form .wide-field,.product-edit-form .wide-field{grid-column:1/-1}
 .form-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .category-manager form{display:grid;grid-template-columns:minmax(220px,1fr) auto;gap:12px;align-items:end;max-width:680px}
 .category-manager form input{margin-bottom:0}
@@ -80,6 +81,9 @@
 .product-dialog-details dt{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#657480}
 .product-dialog-details dd{margin:0;font-size:16px;font-weight:700;color:#173441}
 .product-dialog-details>div:first-child dd{font-size:25px;color:#126454}
+.product-file-link{display:inline-flex;align-items:center;gap:6px;color:#126454;text-decoration:none;font-weight:700}
+.product-file-link:hover{text-decoration:underline}
+.product-file-link:focus-visible{outline:3px solid #c89d3c;outline-offset:3px;border-radius:3px}
 .product-dialog-actions{display:grid;gap:9px;margin-top:18px}
 .product-dialog-actions button{width:100%}
 .product-edit-form{padding:24px 26px 26px}
