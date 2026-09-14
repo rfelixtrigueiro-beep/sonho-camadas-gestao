@@ -64,10 +64,10 @@ export default function ProductSheet({userId}:{userId:string}){
 
  async function createSupply(event:React.SyntheticEvent<HTMLFormElement>){
   event.preventDefault();setSavingSupply(true);setStatus('Salvando insumo…');
-  const values={nome:supplyForm.nome.trim(),valor_compra:number(supplyForm.valor_compra),quantidade_compra:number(supplyForm.quantidade_compra),unidade_medida:supplyForm.unidade_medida,updated_at:new Date().toISOString()};
+  const values={nome:supplyForm.nome.trim(),valor_compra:number(supplyForm.valor_compra),quantidade_compra:number(supplyForm.quantidade_compra),unidade_medida:supplyForm.unidade_medida,atualizado_em:new Date().toISOString()};
   const request=editingSupplyId?supabase.from('farm_supplies').update(values).eq('id',editingSupplyId):supabase.from('farm_supplies').insert(values);
   const {data,error}=await request.select('id,nome,valor_compra,quantidade_compra,unidade_medida,ativo').single();
-  if(error)setStatus(error.code==='23505'?'Já existe um insumo ativo com esse nome.':'Não foi possível cadastrar o insumo. Confira os dados.');
+  if(error)setStatus(error.code==='23505'?'Já existe um insumo ativo com esse nome.':`Não foi possível salvar o insumo (${error.code||'erro do banco'}).`);
   else{setCatalog(current=>sortByStatusAndName(editingSupplyId?current.map(item=>item.id===editingSupplyId?data as CatalogSupply:item):[...current,data as CatalogSupply]));setSupplyForm(emptySupply);setEditingSupplyId(null);setRegistryOpen(false);setStatus(editingSupplyId?'Insumo atualizado. Novas seleções usarão o novo valor.':'Insumo cadastrado e disponível na calculadora.')}
   setSavingSupply(false);
  }
@@ -92,7 +92,7 @@ export default function ProductSheet({userId}:{userId:string}){
 
  async function toggleSupply(supply:CatalogSupply){
   const ativo=!supply.ativo;setStatus(`${ativo?'Ativando':'Desativando'} insumo…`);
-  const {data,error}=await supabase.from('farm_supplies').update({ativo,updated_at:new Date().toISOString()}).eq('id',supply.id).select('id,nome,valor_compra,quantidade_compra,unidade_medida,ativo').single();
+  const {data,error}=await supabase.from('farm_supplies').update({ativo,atualizado_em:new Date().toISOString()}).eq('id',supply.id).select('id,nome,valor_compra,quantidade_compra,unidade_medida,ativo').single();
   if(error)setStatus(error.code==='23505'?'Já existe outro insumo ativo com esse nome.':'Não foi possível alterar o status do insumo.');
   else{setCatalog(current=>sortByStatusAndName(current.map(item=>item.id===supply.id?data as CatalogSupply:item)));setStatus(`Insumo ${ativo?'ativado e disponível na calculadora':'desativado'}.`)}
  }

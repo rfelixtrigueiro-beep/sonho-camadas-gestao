@@ -5,8 +5,8 @@ create table if not exists public.farm_supplies (
   quantidade_compra numeric not null check (quantidade_compra > 0),
   unidade_medida text not null check (unidade_medida in ('un', 'g', 'kg', 'ml', 'l', 'cm', 'm')),
   ativo boolean not null default true,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  criado_em timestamptz not null default now(),
+  atualizado_em timestamptz not null default now()
 );
 
 create unique index if not exists farm_supplies_active_name_unique
