@@ -109,8 +109,16 @@
 .kits-heading h2{margin:3px 0 5px;font-size:25px}
 .kits-heading p{margin-bottom:0}
 .kit-form{margin-bottom:20px}
+.kit-form-title{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.kit-form-title h3{margin:0;color:#173441}
 .kit-form .wide-field{grid-column:1/-1}
 .kit-form input[type=file]{padding:9px}
+.kit-price-mode{display:flex;align-items:center;gap:18px;flex-wrap:wrap;border:1px solid #dce3e9;border-radius:10px;padding:16px;margin:0 0 20px}
+.kit-price-mode legend{padding:0 7px;font-weight:700;color:#173441}
+.kit-price-mode>label{display:flex;align-items:center;gap:7px;margin:0}
+.kit-price-mode input[type=radio]{width:auto;margin:0}
+.kit-price-mode .kit-manual-price{display:grid;grid-template-columns:auto minmax(140px,220px);align-items:center;gap:10px;width:100%;padding-top:10px;border-top:1px solid #e4e9ed}
+.kit-price-mode .kit-manual-price input{margin:0}
 .kit-products{display:grid;gap:9px;border:1px solid #dce3e9;border-radius:12px;padding:16px;margin:0 0 20px}
 .kit-products legend{padding:0 7px;font-weight:700;color:#173441}
 .kit-product{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px;border:1px solid #e0e6e9;border-radius:10px;background:#fff}
@@ -133,6 +141,7 @@
 .kit-calculation .kit-final strong{font-size:23px;color:#126454}
 .kits-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 .kit-card{position:relative;overflow:hidden;border:1px solid #dce3e9;border-radius:14px;background:#fff;box-shadow:0 8px 24px rgba(20,47,57,.05)}
+.kit-card.disabled-kit{opacity:.62;border-style:dashed}
 .kit-card-hit{position:absolute!important;inset:0!important;z-index:2!important;width:100%!important;height:100%!important;padding:0!important;border:0!important;background:transparent!important;color:transparent!important}
 .kit-card:focus-within{outline:3px solid #c89d3c;outline-offset:3px}
 .kit-collage{display:grid;grid-template-columns:repeat(2,1fr);height:150px;background:#e8eeef}
@@ -149,6 +158,10 @@
 .kit-dialog{width:min(92vw,650px)!important;max-width:650px!important;max-height:90vh;overflow:auto;padding:25px!important}
 .kit-dialog [data-slot=dialog-header]{padding-right:35px}
 .kit-dialog [data-slot=dialog-header] .badge{width:max-content;margin-bottom:6px}
+.kit-dialog-badges{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.status-chip-active,.status-chip-disabled{padding:5px 8px;border-radius:999px;font-size:12px;font-weight:700}
+.status-chip-active{background:#e3f2eb;color:#17694f}
+.status-chip-disabled{background:#f1f2f3;color:#657480}
 .kit-dialog-cover{display:grid;place-items:center;width:100%;max-height:360px;overflow:hidden;border-radius:12px;background:#e8eeef}
 .kit-dialog-cover img{display:block;width:100%;max-height:360px;object-fit:contain}
 .kit-detail-items{display:grid;gap:8px;margin-top:10px}
@@ -157,5 +170,9 @@
 .kit-detail-items span{display:grid;gap:3px}
 .kit-detail-items small{color:#657480}
 .kit-detail-items b{color:#173441;white-space:nowrap}
+.kit-admin-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.kit-admin-actions button{width:100%}
+.danger-button{background:#a53d3d!important;color:#fff!important}
+.danger-button:hover{background:#852f2f!important}
 @media(max-width:900px){.kits-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:600px){.kits-heading{align-items:stretch;flex-direction:column}.kits-heading button{width:100%}.kits-grid{grid-template-columns:1fr}.kit-product{align-items:flex-start;flex-direction:column}.kit-quantity{width:100%;justify-content:space-between}.kit-detail-items>div{grid-template-columns:42px minmax(0,1fr)}.kit-detail-items img,.kit-detail-items .kit-product-placeholder{width:42px;height:42px}.kit-detail-items b{grid-column:2}.kit-dialog{width:calc(100vw - 20px)!important;padding:20px!important}}
+@media(max-width:600px){.kits-heading{align-items:stretch;flex-direction:column}.kits-heading button{width:100%}.kits-grid{grid-template-columns:1fr}.kit-price-mode{align-items:flex-start;flex-direction:column}.kit-price-mode .kit-manual-price{grid-template-columns:1fr;width:100%}.kit-product{align-items:flex-start;flex-direction:column}.kit-quantity{width:100%;justify-content:space-between}.kit-detail-items>div{grid-template-columns:42px minmax(0,1fr)}.kit-detail-items img,.kit-detail-items .kit-product-placeholder{width:42px;height:42px}.kit-detail-items b{grid-column:2}.kit-admin-actions{grid-template-columns:1fr}.kit-dialog{width:calc(100vw - 20px)!important;padding:20px!important}}
