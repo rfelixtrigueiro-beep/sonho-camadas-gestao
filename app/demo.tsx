@@ -4,6 +4,7 @@ import {useEffect,useState} from 'react';
 import ProductSheet from './product-sheet';
 import Portfolio from './portfolio';
 import Inventory from './inventory';
+import Orders from './orders';
 import {LayoutDashboard,Package,ReceiptText,Printer,Boxes,Wallet,Images,ArrowRight,Info} from 'lucide-react';
 import {SidebarProvider,Sidebar,SidebarContent,SidebarHeader,SidebarFooter,SidebarMenu,SidebarMenuItem,SidebarMenuButton,SidebarTrigger,useSidebar} from '@/components/ui/sidebar';
 
@@ -24,7 +25,7 @@ export default function Demo({administrator,userId}:{administrator:boolean;userI
  return <SidebarProvider><Menu page={page} go={go} administrator={administrator}/><main><header className="app-header"><div className="crumb"><SidebarTrigger aria-label="Abrir menu"/>Farm <span>/</span> <strong>{nav[page][0]}</strong></div><span className="demo-pill">● Online</span></header><nav className="mobile-nav" aria-label="Navegação principal">{nav.map(([label,Icon],i)=>!administrator&&(i===1||i===3||i===4)?null:<button key={label} className={page===i?'active':''} aria-current={page===i?'page':undefined} onClick={()=>go(i)}><Icon/><span>{label}</span></button>)}</nav><div className="canvas"><div className="heading"><div><p className="eyebrow">SUA FARM, EM CADA ETAPA</p><h1>{nav[page][0]}</h1><p>{descriptions[page]}</p></div></div>{note&&<div className="demo-note"><Info size={19}/><span>{note}</span></div>}
  {page===0&&<div className="split"><section className="panel accent-panel"><p className="eyebrow">PRODUTOS E CUSTOS</p><h2>Calcule o custo<br/>de cada peça</h2><p>Preencha a ficha do produto, confira o preço sugerido e salve no Portfólio e no Estoque.</p><button disabled={!administrator} onClick={()=>go(1)}>Abrir calculadora <ArrowRight size={17}/></button></section><section className="panel"><p className="eyebrow">CATÁLOGO</p><h2>Portfólio e estoque</h2><p className="muted">Consulte os produtos cadastrados, fotos, preços, categorias e saldos disponíveis.</p><div className="actions"><button onClick={()=>go(6)}>Abrir Portfólio <ArrowRight size={17}/></button>{administrator&&<button className="secondary" onClick={()=>go(4)}>Ver Estoque</button>}</div></section></div>}
  {administrator&&<div hidden={page!==1}><ProductSheet userId={userId}/></div>}
- {page===2&&<EmptyModule icon={ReceiptText} title="Nenhum pedido cadastrado" text="Os pedidos aparecerão aqui quando forem registrados."/>}
+ <div hidden={page!==2}><Orders administrator={administrator} userId={userId}/></div>
  {administrator&&page===3&&<EmptyModule icon={Printer} title="Nenhuma produção em andamento" text="As ordens de produção aparecerão aqui."/>}
  {administrator&&page===4&&<Inventory/>}
  {page===5&&<EmptyModule icon={Wallet} title="Nenhum recebimento cadastrado" text="Os recebimentos dos pedidos aparecerão aqui."/>}

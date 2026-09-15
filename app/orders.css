@@ -1,0 +1,43 @@
+.orders-module{display:grid;gap:20px}
+.order-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.order-metrics article{display:flex;align-items:center;gap:14px;min-width:0;padding:20px;border:1px solid #d7e1e5;border-radius:14px;background:#fff;box-shadow:0 8px 30px rgba(27,57,68,.055)}
+.order-metrics small{display:block;margin-bottom:5px;color:#60747c;font-size:12px}
+.order-metrics strong{font-size:25px;color:#173441}
+.order-metric-icon{display:grid;place-items:center;width:43px;height:43px;flex:0 0 auto;border-radius:12px;background:#e3f2eb;color:#17694f}
+.order-metric-icon.warning{background:#fff2d5;color:#8b6419}
+.order-metric-icon.pricing{background:#e8eef8;color:#385e92}
+.orders-panel{margin:0}
+.orders-title{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}
+.orders-title h2,.orders-title p{margin-bottom:4px}
+.order-filters{display:grid;grid-template-columns:minmax(240px,1.5fr) minmax(175px,.8fr) minmax(175px,.8fr) minmax(170px,.7fr);gap:12px;align-items:end;padding:16px;border:1px solid #dfe7ea;border-radius:12px;background:#f8fafb}
+.order-filters label{margin:0;color:#405861;font-size:12px}
+.order-filters input,.order-filters select{width:100%;height:44px;min-height:44px;margin:7px 0 0;padding:9px 11px;border:1px solid #bdcbd4;border-radius:8px;background:#fff;color:#173441;font-size:14px}
+.order-input-wrap{position:relative;display:block}
+.order-input-wrap svg{position:absolute;z-index:1;left:12px;top:20px;color:#657780}
+.order-input-wrap input{padding-left:39px}
+.clear-order-filters{grid-column:1/-1;justify-self:start;min-height:38px!important;padding:7px 11px!important}
+.orders-empty{display:grid;justify-items:center;gap:8px;padding:58px 20px;text-align:center;color:#657780}
+.orders-empty h3,.orders-empty p{margin:0}
+.order-list{display:grid;gap:10px;margin:18px 0 0;padding:0;list-style:none}
+.order-row{display:grid;grid-template-columns:minmax(210px,1.45fr) minmax(140px,.85fr) 100px 125px 110px minmax(140px,.85fr);align-items:center;gap:14px;padding:15px 16px;border:1px solid #dfe7ea;border-radius:12px;background:#fff}
+.order-row:hover{border-color:#a8bebd;box-shadow:0 8px 22px rgba(27,57,68,.07)}
+.order-main{display:grid;gap:3px;min-width:0}
+.order-main>strong{color:#126454;font-size:13px}
+.order-main>span{overflow:hidden;color:#173441;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+.order-main small{overflow:hidden;color:#657780;font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+.order-field{display:grid;gap:4px;min-width:0}
+.order-field small{color:#71838b;font-size:11px}
+.order-field strong{display:flex;align-items:center;gap:5px;overflow:hidden;color:#29454f;font-size:13px;text-overflow:ellipsis;white-space:nowrap}
+.order-field.overdue strong{color:#a33b3b}
+.order-value strong{color:#126454;font-size:15px}
+.order-status{justify-self:start;padding:6px 9px;border-radius:999px;background:#edf1f4;color:#4e6169;font-size:11px;font-weight:700;line-height:1.25;text-align:center}
+.status-aguardando_aprovacao{background:#fff2d5;color:#7b5816}
+.status-aguardando_precificacao,.status-em_precificacao,.status-precificado,.status-aguardando_confirmacao_vendedor{background:#e8eef8;color:#385e92}
+.status-aprovado,.status-pronto,.status-entregue{background:#e3f2eb;color:#17694f}
+.status-reprovado,.status-cancelado{background:#fff0ef;color:#9a3737}
+.status-devolvido_ajuste{background:#f8e9dc;color:#8b4d22}
+.status-em_producao{background:#e8f3f3;color:#17636b}
+.order-results{margin:16px 0 0;color:#657780;font-size:12px;text-align:right}
+@media(max-width:1180px){.order-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.order-row{grid-template-columns:minmax(220px,1.5fr) repeat(2,minmax(120px,.8fr))}.order-field:nth-of-type(3),.order-field:nth-of-type(4),.order-status{margin-top:3px}}
+@media(max-width:720px){.order-metrics{grid-template-columns:1fr}.orders-title{align-items:stretch;flex-direction:column}.orders-title button{width:100%}.order-filters{grid-template-columns:1fr}.order-row{grid-template-columns:1fr 1fr;gap:12px}.order-main{grid-column:1/-1;padding-bottom:10px;border-bottom:1px solid #e4e9ed}.order-status{grid-column:1/-1}.order-results{text-align:left}}
+@media(max-width:420px){.order-row{grid-template-columns:1fr}.order-main,.order-status{grid-column:1}.order-field{padding-bottom:8px;border-bottom:1px solid #eef2f3}.order-field:last-of-type{border-bottom:0}}
