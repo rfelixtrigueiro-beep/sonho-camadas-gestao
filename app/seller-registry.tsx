@@ -8,7 +8,7 @@ export type SellerUser={id:string;name:string;email:string};
 
 const sellerEnvironment=import.meta.env.BASE_URL.includes('/desenvolvimento/')?'desenvolvimento':'producao';
 
-export default function SellerRegistry({sellers,users,onChanged,onClose}:{sellers:Seller[];users:SellerUser[];onChanged:()=>Promise<void>;onClose:()=>void}){
+export default function SellerRegistry({sellers,users,onChanged,onClose}:{sellers:Seller[];users:SellerUser[];onChanged:()=>Promise<void>;onClose?:()=>void}){
  const [editing,setEditing]=useState<Seller|null>(null),[name,setName]=useState(''),[phone,setPhone]=useState(''),[email,setEmail]=useState(''),[linkUser,setLinkUser]=useState(false),[userId,setUserId]=useState(''),[saving,setSaving]=useState(false),[message,setMessage]=useState('');
  const usedUsers=new Set(sellers.filter(seller=>seller.usuario_id&&seller.id!==editing?.id).map(seller=>seller.usuario_id));
 
@@ -29,8 +29,8 @@ export default function SellerRegistry({sellers,users,onChanged,onClose}:{seller
   if(error)setMessage('Não foi possível alterar o vendedor.');else{setMessage(seller.ativo?'Vendedor desativado.':'Vendedor reativado.');await onChanged()}
  }
 
- return <section className="panel seller-registry">
-  <div className="orders-title"><div><h2>Cadastro de vendedores</h2><p className="muted">O vínculo com um usuário é opcional. Quando vinculado, o vendedor acessa os próprios pedidos.</p></div><button className="secondary" onClick={onClose}><X size={16}/> Fechar</button></div>
+ return <section className={onClose?'panel seller-registry':'seller-registry'}>
+  <div className="orders-title"><div><h3>Vendedores</h3><p className="muted">O vínculo com um usuário é opcional. Quando vinculado, o vendedor acessa os próprios pedidos.</p></div>{onClose&&<button className="secondary" onClick={onClose}><X size={16}/> Fechar</button>}</div>
   <form className="seller-form" onSubmit={save}>
    <label>Nome do vendedor<input value={name} onChange={event=>setName(event.target.value)} required maxLength={120}/></label>
    <label>Telefone ou WhatsApp<input value={phone} onChange={event=>setPhone(event.target.value)} inputMode="tel" maxLength={30}/></label>
