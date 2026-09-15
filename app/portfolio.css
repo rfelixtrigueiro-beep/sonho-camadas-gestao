@@ -109,6 +109,8 @@
 .kits-heading h2{margin:3px 0 5px;font-size:25px}
 .kits-heading p{margin-bottom:0}
 .kit-form{margin-bottom:20px}
+.kit-form .wide-field{grid-column:1/-1}
+.kit-form input[type=file]{padding:9px}
 .kit-products{display:grid;gap:9px;border:1px solid #dce3e9;border-radius:12px;padding:16px;margin:0 0 20px}
 .kit-products legend{padding:0 7px;font-weight:700;color:#173441}
 .kit-product{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px;border:1px solid #e0e6e9;border-radius:10px;background:#fff}
@@ -136,6 +138,8 @@
 .kit-collage{display:grid;grid-template-columns:repeat(2,1fr);height:150px;background:#e8eeef}
 .kit-collage:has(>:only-child){grid-template-columns:1fr}
 .kit-collage img,.kit-collage>span{width:100%;height:100%;min-height:0;object-fit:cover;display:grid;place-items:center;color:#60737d;border:1px solid rgba(255,255,255,.7)}
+.kit-cover{height:150px;background:#e8eeef;overflow:hidden}
+.kit-cover img{display:block;width:100%;height:100%;object-fit:cover}
 .kit-card-body{padding:17px}
 .kit-card-body h3{margin:0 0 7px;font-size:18px;color:#173441}
 .kit-card-body p{margin:0;color:#657480;font-size:12px}
@@ -145,6 +149,8 @@
 .kit-dialog{width:min(92vw,650px)!important;max-width:650px!important;max-height:90vh;overflow:auto;padding:25px!important}
 .kit-dialog [data-slot=dialog-header]{padding-right:35px}
 .kit-dialog [data-slot=dialog-header] .badge{width:max-content;margin-bottom:6px}
+.kit-dialog-cover{display:grid;place-items:center;width:100%;max-height:360px;overflow:hidden;border-radius:12px;background:#e8eeef}
+.kit-dialog-cover img{display:block;width:100%;max-height:360px;object-fit:contain}
 .kit-detail-items{display:grid;gap:8px;margin-top:10px}
 .kit-detail-items>div{display:grid;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;gap:11px;padding:9px;border:1px solid #e0e6e9;border-radius:10px}
 .kit-detail-items img{width:48px;height:48px;object-fit:cover;border-radius:8px}

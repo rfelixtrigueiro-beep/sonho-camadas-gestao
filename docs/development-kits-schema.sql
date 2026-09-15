@@ -7,6 +7,7 @@ create table if not exists public.farm_product_kits (
     check (desconto_percentual between 0 and 100),
   subtotal numeric(12,2) not null default 0 check (subtotal >= 0),
   preco_venda numeric(12,2) not null default 0 check (preco_venda >= 0),
+  foto_url text,
   exibir_portfolio boolean not null default false,
   ativo boolean not null default true,
   ambiente text not null default 'desenvolvimento'
