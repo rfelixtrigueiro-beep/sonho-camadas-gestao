@@ -197,7 +197,7 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid 
  .crumb>span{display:none}
  .mobile-nav{position:sticky;top:58px;z-index:19;display:flex;gap:5px;overflow-x:auto;padding:8px 10px;background:rgba(255,255,255,.96);border-bottom:1px solid #dce3e9;scrollbar-width:none;overscroll-behavior-x:contain}
  .mobile-nav::-webkit-scrollbar{display:none}
- .mobile-nav button{flex:0 0 auto;display:flex;align-items:center;gap:6px;min-height:39px!important;padding:8px 11px!important;border-radius:9px!important;background:#f2f6f6!important;color:#405c63!important;border:1px solid transparent!important;font-size:12px!important}
+ .mobile-nav button{flex:0 0 auto;display:flex;align-items:center;gap:6px;min-height:44px!important;padding:8px 11px!important;border-radius:9px!important;background:#f2f6f6!important;color:#405c63!important;border:1px solid transparent!important;font-size:12px!important}
  .mobile-nav button svg{width:16px;height:16px}
  .mobile-nav button.active{background:#163f45!important;color:#fff!important;box-shadow:0 4px 12px rgba(20,63,69,.2)}
  .canvas{padding:22px 14px 28px}
