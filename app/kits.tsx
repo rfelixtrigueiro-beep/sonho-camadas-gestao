@@ -12,6 +12,8 @@ type Kit={id:string;nome:string;foto_url:string|null;desconto_percentual:number;
 const reais=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
 const roundMoney=(value:number)=>Math.round((value+Number.EPSILON)*100)/100;
 const storagePath=(url:string|null)=>{if(!url)return null;const marker='/storage/v1/object/public/portfolio/';const index=url.indexOf(marker);return index>=0?decodeURIComponent(url.slice(index+marker.length)):null};
+const kitEnvironment=import.meta.env.BASE_URL.includes('/desenvolvimento/')?'desenvolvimento':'producao';
+const environmentLabel=kitEnvironment==='desenvolvimento'?'desenvolvimento':'produção';
 
 export default function Kits({administrator,userId,products}:{administrator:boolean;userId:string;products:KitSourceProduct[]}){
  const [kits,setKits]=useState<Kit[]>([]),[loading,setLoading]=useState(true),[message,setMessage]=useState(''),[formOpen,setFormOpen]=useState(false),[saving,setSaving]=useState(false),[selectedKit,setSelectedKit]=useState<Kit|null>(null),[editingKit,setEditingKit]=useState<Kit|null>(null);
@@ -26,7 +28,7 @@ export default function Kits({administrator,userId,products}:{administrator:bool
 
  const load=useCallback(async()=>{
   setLoading(true);
-  let request=supabase.from('farm_product_kits').select('id,nome,foto_url,desconto_percentual,subtotal,preco_venda,preco_manual,exibir_portfolio,ativo').eq('ambiente','desenvolvimento').order('criado_em',{ascending:false});
+  let request=supabase.from('farm_product_kits').select('id,nome,foto_url,desconto_percentual,subtotal,preco_venda,preco_manual,exibir_portfolio,ativo').eq('ambiente',kitEnvironment).order('criado_em',{ascending:false});
   if(!administrator)request=request.eq('ativo',true).eq('exibir_portfolio',true);
   const kitsResult=await request;
   if(kitsResult.error){setMessage('Não foi possível carregar os kits.');setKits([]);setLoading(false);return}
@@ -56,7 +58,7 @@ export default function Kits({administrator,userId,products}:{administrator:bool
   let kitId:string|null=editingKit?.id||null,uploadedPath:string|null=null;
   try{
    if(!kitId){
-    const {data,error}=await supabase.from('farm_product_kits').insert({nome:name.trim(),categoria:'Kit',foto_url:null,desconto_percentual:useManualPrice?0:discountNumber,subtotal,preco_venda:finalPrice,preco_manual:useManualPrice,exibir_portfolio:published,ativo:true,ambiente:'desenvolvimento',criado_por:userId}).select('id').single();
+    const {data,error}=await supabase.from('farm_product_kits').insert({nome:name.trim(),categoria:'Kit',foto_url:null,desconto_percentual:useManualPrice?0:discountNumber,subtotal,preco_venda:finalPrice,preco_manual:useManualPrice,exibir_portfolio:published,ativo:true,ambiente:kitEnvironment,criado_por:userId}).select('id').single();
     if(error||!data)throw error||new Error('Kit sem identificador');
     kitId=(data as {id:string}).id;
    }
@@ -81,7 +83,7 @@ export default function Kits({administrator,userId,products}:{administrator:bool
    const itemsResult=await supabase.from('farm_product_kit_items').insert(kitItems);
    if(itemsResult.error)throw itemsResult.error;
    if(editingKit&&uploadedPath){const oldPath=storagePath(editingKit.foto_url);if(oldPath)await supabase.storage.from('portfolio').remove([oldPath])}
-   const action=editingKit?'atualizado':'criado';clearForm();setMessage(published?`Kit ${action} e publicado no ambiente de desenvolvimento.`:`Kit ${action} como oculto no ambiente de desenvolvimento.`);await load();
+   const action=editingKit?'atualizado':'criado';clearForm();setMessage(published?`Kit ${action} e publicado no ambiente de ${environmentLabel}.`:`Kit ${action} como oculto no ambiente de ${environmentLabel}.`);await load();
   }catch{
    if(uploadedPath)await supabase.storage.from('portfolio').remove([uploadedPath]);
    if(editingKit&&kitId){
