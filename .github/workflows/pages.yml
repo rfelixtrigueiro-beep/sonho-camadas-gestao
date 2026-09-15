@@ -49,13 +49,13 @@ jobs:
         working-directory: production
         env:
           GITHUB_PAGES: 'true'
-          GITHUB_PAGES_BASE: /sonho-camadas-gestao/
+          GITHUB_PAGES_BASE: /
       - name: Gerar a versão de desenvolvimento
         run: npm run build
         working-directory: development
         env:
           GITHUB_PAGES: 'true'
-          GITHUB_PAGES_BASE: /sonho-camadas-gestao/desenvolvimento/
+          GITHUB_PAGES_BASE: /desenvolvimento/
       - name: Montar as duas versões
         run: |
           mkdir -p site/desenvolvimento
