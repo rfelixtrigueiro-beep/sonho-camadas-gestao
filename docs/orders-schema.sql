@@ -25,6 +25,11 @@ create table if not exists public.farm_orders (
   endereco_entrega text,
   data_pedido date not null default current_date,
   prazo_solicitado date,
+  subtotal numeric(12,2) not null default 0 check (subtotal >= 0),
+  desconto_percentual numeric(5,2) not null default 0
+    check (desconto_percentual between 0 and 100),
+  valor_venda_informado numeric(12,2)
+    check (valor_venda_informado is null or valor_venda_informado >= 0),
   valor_total numeric(12,2) not null default 0 check (valor_total >= 0),
   forma_pagamento text,
   observacoes text,

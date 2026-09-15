@@ -18,8 +18,16 @@
 .order-product label>span:last-child small{color:#657780;font-size:11px}
 .order-quantity{display:flex!important;align-items:center;gap:7px;color:#60747c;font-size:11px}
 .order-quantity input{width:68px!important;margin:0!important;padding:8px!important}
+.order-price-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}
+.order-price-fields label{margin:0}
+.order-price-fields input{display:block;width:100%;margin:7px 0 5px;padding:10px 12px;border:1px solid #bdcbd4;border-radius:8px;background:#fff;color:#173441;font:inherit}
+.order-price-fields small{color:#657780;font-size:11px;font-weight:400}
+.order-price-summary{overflow:hidden;margin:18px 0;border:1px solid #dce3e9;border-radius:12px;background:#fff}
+.order-price-summary>div{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:11px 16px;border-bottom:1px solid #e4e9ed;color:#526973;font-size:13px}
+.order-price-summary>div:last-child{border-bottom:0}
 .order-form-total{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:18px 0;padding:18px;border-radius:12px;background:#edf5f4;color:#173441;font-weight:700}
 .order-form-total strong{color:#126454;font-size:26px}
+.order-price-summary .order-form-total{margin:0;border-radius:0;padding:18px}
 .order-form-actions{display:flex;gap:9px;flex-wrap:wrap}
 .order-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 .order-metrics article{display:flex;align-items:center;gap:14px;min-width:0;padding:20px;border:1px solid #d7e1e5;border-radius:14px;background:#fff;box-shadow:0 8px 30px rgba(27,57,68,.055)}
@@ -52,6 +60,7 @@
 .order-field strong{display:flex;align-items:center;gap:5px;overflow:hidden;color:#29454f;font-size:13px;text-overflow:ellipsis;white-space:nowrap}
 .order-field.overdue strong{color:#a33b3b}
 .order-value strong{color:#126454;font-size:15px}
+.order-value em{color:#657780;font-size:10px;font-style:normal}
 .order-status{justify-self:start;padding:6px 9px;border-radius:999px;background:#edf1f4;color:#4e6169;font-size:11px;font-weight:700;line-height:1.25;text-align:center}
 .status-aguardando_aprovacao{background:#fff2d5;color:#7b5816}
 .status-aguardando_precificacao,.status-em_precificacao,.status-precificado,.status-aguardando_confirmacao_vendedor{background:#e8eef8;color:#385e92}
@@ -82,5 +91,5 @@
 .seller-card-actions button{min-height:34px!important;padding:6px 10px!important;font-size:12px!important}
 @media(max-width:1180px){.order-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.order-row{grid-template-columns:minmax(220px,1.5fr) repeat(2,minmax(120px,.8fr))}.order-field:nth-of-type(3),.order-field:nth-of-type(4),.order-status{margin-top:3px}}
 @media(max-width:1000px){.order-form-fields,.seller-form{grid-template-columns:repeat(2,minmax(0,1fr))}.order-products{grid-template-columns:1fr}}
-@media(max-width:720px){.order-metrics{grid-template-columns:1fr}.order-page-actions{display:grid}.order-page-actions button{width:100%}.orders-title{align-items:stretch;flex-direction:column}.orders-title button{width:100%}.order-filters,.order-form-fields,.seller-form{grid-template-columns:1fr}.order-form-fields .wide-field,.seller-user-field,.seller-form-actions{grid-column:1}.order-product{align-items:flex-start;flex-direction:column}.order-quantity{width:100%;justify-content:space-between}.order-form-actions{display:grid}.order-form-actions button{width:100%}.order-row{grid-template-columns:1fr 1fr;gap:12px}.order-main{grid-column:1/-1;padding-bottom:10px;border-bottom:1px solid #e4e9ed}.order-status{grid-column:1/-1}.order-row-actions{display:grid;grid-template-columns:1fr 1fr}.seller-card{grid-template-columns:1fr auto}.seller-card-actions{grid-column:1/-1}.order-results{text-align:left}}
+@media(max-width:720px){.order-metrics{grid-template-columns:1fr}.order-page-actions{display:grid}.order-page-actions button{width:100%}.orders-title{align-items:stretch;flex-direction:column}.orders-title button{width:100%}.order-filters,.order-form-fields,.order-price-fields,.seller-form{grid-template-columns:1fr}.order-form-fields .wide-field,.seller-user-field,.seller-form-actions{grid-column:1}.order-product{align-items:flex-start;flex-direction:column}.order-quantity{width:100%;justify-content:space-between}.order-form-actions{display:grid}.order-form-actions button{width:100%}.order-row{grid-template-columns:1fr 1fr;gap:12px}.order-main{grid-column:1/-1;padding-bottom:10px;border-bottom:1px solid #e4e9ed}.order-status{grid-column:1/-1}.order-row-actions{display:grid;grid-template-columns:1fr 1fr}.seller-card{grid-template-columns:1fr auto}.seller-card-actions{grid-column:1/-1}.order-results{text-align:left}}
 @media(max-width:420px){.order-row{grid-template-columns:1fr}.order-main,.order-status{grid-column:1}.order-field{padding-bottom:8px;border-bottom:1px solid #eef2f3}.order-field:last-of-type{border-bottom:0}}
