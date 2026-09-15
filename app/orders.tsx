@@ -1,79 +1,108 @@
 'use client';
+/* oxlint-disable next/no-img-element */
 import {useCallback,useEffect,useMemo,useState} from 'react';
-import {CalendarDays,Clock3,FilterX,RefreshCw,Search,ShoppingBag,UserRoundCheck} from 'lucide-react';
+import {CalendarDays,Clock3,FilterX,Pencil,Plus,RefreshCw,Search,ShoppingBag,Store,UserRoundCheck,XCircle} from 'lucide-react';
 import {supabase} from '@/lib/supabase';
+import SellerRegistry,{type Seller,type SellerUser} from './seller-registry';
 import './orders.css';
 
-type OrderItem={produto_nome:string};
-type Order={id:string;numero:number;cliente_nome:string;vendedor_id:string;vendedor_nome:string;data_pedido:string;prazo_solicitado:string|null;valor_total:number;status:string;items:OrderItem[]};
+type OrderItem={produto_id:string|null;produto_nome:string;quantidade:number;preco_unitario:number};
+type Order={id:string;numero:number;cliente_nome:string;cliente_telefone:string|null;cliente_email:string|null;cliente_documento:string|null;endereco_entrega:string|null;vendedor_id:string|null;vendedor_cadastro_id:string|null;vendedor_nome:string;data_pedido:string;prazo_solicitado:string|null;forma_pagamento:string|null;observacoes:string|null;motivo_cancelamento:string|null;valor_total:number;status:string;items:OrderItem[]};
 type RawOrder=Omit<Order,'items'>&{itens:OrderItem[]|null};
+type Product={airtable_record_id:string;nome:string;preco_venda:number|null;estoque:number|null;foto_urls:string[]};
+type SelectedItem={quantity:number;price:number};
+type OrderForm={cliente_nome:string;cliente_telefone:string;cliente_email:string;cliente_documento:string;endereco_entrega:string;vendedor_cadastro_id:string;prazo_solicitado:string;forma_pagamento:string;observacoes:string};
 
+const emptyForm:OrderForm={cliente_nome:'',cliente_telefone:'',cliente_email:'',cliente_documento:'',endereco_entrega:'',vendedor_cadastro_id:'',prazo_solicitado:'',forma_pagamento:'',observacoes:''};
 const reais=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
 const orderEnvironment=import.meta.env.BASE_URL.includes('/desenvolvimento/')?'desenvolvimento':'producao';
 const pricingStatuses=new Set(['aguardando_precificacao','em_precificacao','precificado','aguardando_confirmacao_vendedor']);
-const statusLabels:Record<string,string>={
- rascunho:'Rascunho',aguardando_precificacao:'Aguardando precificação',em_precificacao:'Em precificação',precificado:'Precificado',aguardando_confirmacao_vendedor:'Aguardando confirmação',aguardando_aprovacao:'Aguardando aprovação',devolvido_ajuste:'Devolvido para ajuste',reprovado:'Reprovado',aprovado:'Aprovado',em_producao:'Em produção',pronto:'Pronto',entregue:'Entregue',cancelado:'Cancelado'
-};
+const statusLabels:Record<string,string>={rascunho:'Rascunho',aguardando_precificacao:'Aguardando precificação',em_precificacao:'Em precificação',precificado:'Precificado',aguardando_confirmacao_vendedor:'Aguardando confirmação',aguardando_aprovacao:'Aguardando aprovação',devolvido_ajuste:'Devolvido para ajuste',reprovado:'Reprovado',aprovado:'Aprovado',em_producao:'Em produção',pronto:'Pronto',entregue:'Entregue',cancelado:'Cancelado'};
 const statusOptions=Object.entries(statusLabels);
 const formatDate=(value:string|null)=>value?new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR'):'Não informado';
 const orderNumber=(value:number)=>`#${String(value).padStart(4,'0')}`;
 
 export default function Orders({administrator,userId}:{administrator:boolean;userId:string}){
- const [orders,setOrders]=useState<Order[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState('');
- const [query,setQuery]=useState(''),[status,setStatus]=useState('todos'),[seller,setSeller]=useState('todos'),[period,setPeriod]=useState('todos');
- const [today]=useState(()=>new Date());
+ const [orders,setOrders]=useState<Order[]>([]),[sellers,setSellers]=useState<Seller[]>([]),[sellerUsers,setSellerUsers]=useState<SellerUser[]>([]),[products,setProducts]=useState<Product[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[message,setMessage]=useState('');
+ const [query,setQuery]=useState(''),[status,setStatus]=useState('todos'),[sellerFilter,setSellerFilter]=useState('todos'),[period,setPeriod]=useState('todos'),[today]=useState(()=>new Date());
+ const [sellerRegistryOpen,setSellerRegistryOpen]=useState(false),[formOpen,setFormOpen]=useState(false),[editingOrder,setEditingOrder]=useState<Order|null>(null),[form,setForm]=useState<OrderForm>(emptyForm),[selectedItems,setSelectedItems]=useState<Record<string,SelectedItem>>({}),[saving,setSaving]=useState(false);
 
  const load=useCallback(async()=>{
   setLoading(true);setError('');
-  let request=supabase.from('farm_orders').select('id,numero,cliente_nome,vendedor_id,vendedor_nome,data_pedido,prazo_solicitado,valor_total,status,itens:farm_order_items(produto_nome)').eq('ambiente',orderEnvironment).order('data_pedido',{ascending:false}).order('numero',{ascending:false});
-  if(!administrator)request=request.eq('vendedor_id',userId);
-  const {data,error:loadError}=await request;
-  if(loadError){setOrders([]);setError('Não foi possível carregar os pedidos. Tente novamente.')}else setOrders(((data||[]) as unknown as RawOrder[]).map(order=>({...order,numero:Number(order.numero),valor_total:Number(order.valor_total),items:order.itens||[]})));
+  let orderRequest=supabase.from('farm_orders').select('id,numero,cliente_nome,cliente_telefone,cliente_email,cliente_documento,endereco_entrega,vendedor_id,vendedor_cadastro_id,vendedor_nome,data_pedido,prazo_solicitado,forma_pagamento,observacoes,motivo_cancelamento,valor_total,status,itens:farm_order_items(produto_id,produto_nome,quantidade,preco_unitario)').eq('ambiente',orderEnvironment).order('data_pedido',{ascending:false}).order('numero',{ascending:false});
+  if(!administrator)orderRequest=orderRequest.eq('vendedor_id',userId);
+  const sellerRequest=supabase.from('farm_sellers').select('id,nome,telefone,email,usuario_id,ativo').eq('ambiente',orderEnvironment).order('nome');
+  const productRequest=supabase.from('farm_portfolio_products').select('airtable_record_id,nome,preco_venda,estoque,foto_urls').eq('ativo',true).eq('exibir_portfolio',true).not('preco_venda','is',null).order('nome');
+  const userRequest=administrator?supabase.from('farm_profiles').select('id,name,email').eq('role','vendedor').eq('active',true).order('name'):Promise.resolve({data:[],error:null});
+  const [ordersResult,sellersResult,productsResult,usersResult]=await Promise.all([orderRequest,sellerRequest,productRequest,userRequest]);
+  if(ordersResult.error||sellersResult.error||productsResult.error||usersResult.error){setError('Não foi possível carregar os dados de pedidos. Tente novamente.');setOrders([])}else{
+   setOrders(((ordersResult.data||[]) as unknown as RawOrder[]).map(order=>({...order,numero:Number(order.numero),valor_total:Number(order.valor_total),items:(order.itens||[]).map(item=>({...item,quantidade:Number(item.quantidade),preco_unitario:Number(item.preco_unitario)}))})));
+   setSellers((sellersResult.data||[]) as Seller[]);setProducts((productsResult.data||[]) as Product[]);setSellerUsers((usersResult.data||[]) as SellerUser[]);
+  }
   setLoading(false);
  },[administrator,userId]);
 
  useEffect(()=>{const timer=window.setTimeout(()=>{void load()},0);return()=>window.clearTimeout(timer)},[load]);
 
- const sellers=useMemo(()=>Array.from(new Map(orders.map(order=>[order.vendedor_id,order.vendedor_nome])).entries()).sort((a,b)=>a[1].localeCompare(b[1],'pt-BR')),[orders]);
- const visible=useMemo(()=>{
-  const normalized=query.trim().toLocaleLowerCase('pt-BR').replace(/^#/,'');
-  const days=period==='todos'?null:Number(period);
-  const cutoff=days?new Date(today.getTime()-days*86400000).toISOString().slice(0,10):null;
-  return orders.filter(order=>{
-   const searchText=[order.numero,order.cliente_nome,...order.items.map(item=>item.produto_nome)].join(' ').toLocaleLowerCase('pt-BR');
-   return (!normalized||searchText.includes(normalized))&&(status==='todos'||order.status===status)&&(seller==='todos'||order.vendedor_id===seller)&&(!cutoff||order.data_pedido>=cutoff);
-  });
- },[orders,period,query,seller,status,today]);
- const approvalCount=orders.filter(order=>order.status==='aguardando_aprovacao').length;
- const pricingCount=orders.filter(order=>pricingStatuses.has(order.status)).length;
- const hasFilters=query!==''||status!=='todos'||seller!=='todos'||period!=='todos';
- const clearFilters=()=>{setQuery('');setStatus('todos');setSeller('todos');setPeriod('todos')};
+ const linkedSeller=sellers.find(seller=>seller.usuario_id===userId&&seller.ativo);
+ const selectableSellers=sellers.filter(seller=>seller.ativo);
+ const selectedProducts=products.filter(product=>selectedItems[product.airtable_record_id]);
+ const orderTotal=selectedProducts.reduce((sum,product)=>sum+selectedItems[product.airtable_record_id].quantity*selectedItems[product.airtable_record_id].price,0);
+ const sellerNames=useMemo(()=>Array.from(new Map(orders.map(order=>[order.vendedor_cadastro_id||order.vendedor_id||order.vendedor_nome,order.vendedor_nome])).entries()).sort((a,b)=>a[1].localeCompare(b[1],'pt-BR')),[orders]);
+ const visible=useMemo(()=>{const normalized=query.trim().toLocaleLowerCase('pt-BR').replace(/^#/,'');const days=period==='todos'?null:Number(period);const cutoff=days?new Date(today.getTime()-days*86400000).toISOString().slice(0,10):null;return orders.filter(order=>{const searchText=[order.numero,order.cliente_nome,...order.items.map(item=>item.produto_nome)].join(' ').toLocaleLowerCase('pt-BR');const sellerKey=order.vendedor_cadastro_id||order.vendedor_id||order.vendedor_nome;return(!normalized||searchText.includes(normalized))&&(status==='todos'||order.status===status)&&(sellerFilter==='todos'||sellerKey===sellerFilter)&&(!cutoff||order.data_pedido>=cutoff)})},[orders,period,query,sellerFilter,status,today]);
+ const approvalCount=orders.filter(order=>order.status==='aguardando_aprovacao').length,pricingCount=orders.filter(order=>pricingStatuses.has(order.status)).length;
+ const hasFilters=query!==''||status!=='todos'||sellerFilter!=='todos'||period!=='todos';
 
- return <section className="orders-module" aria-label="Lista de pedidos">
-  <div className="order-metrics">
-   <article><span className="order-metric-icon"><ShoppingBag size={20}/></span><div><small>Pedidos encontrados</small><strong>{visible.length}</strong></div></article>
-   <article><span className="order-metric-icon warning"><UserRoundCheck size={20}/></span><div><small>Aguardando aprovação</small><strong>{approvalCount}</strong></div></article>
-   <article><span className="order-metric-icon pricing"><Clock3 size={20}/></span><div><small>Em fluxo de precificação</small><strong>{pricingCount}</strong></div></article>
-  </div>
-  <section className="panel orders-panel">
-   <div className="orders-title"><div><h2>Lista de pedidos</h2><p className="muted">Pesquise e acompanhe os pedidos {administrator?'de toda a equipe':'registrados por você'}.</p></div><button className="secondary" disabled={loading} onClick={()=>void load()}><RefreshCw size={16}/>{loading?'Atualizando…':'Atualizar'}</button></div>
-   <div className="order-filters">
-    <label className="order-search"><span>Pesquisar</span><span className="order-input-wrap"><Search size={17}/><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="Número, cliente ou produto"/></span></label>
-    <label>Status<select value={status} onChange={event=>setStatus(event.target.value)}><option value="todos">Todos os status</option>{statusOptions.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
-    {administrator&&<label>Vendedor<select value={seller} onChange={event=>setSeller(event.target.value)}><option value="todos">Todos os vendedores</option>{sellers.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>}
-    <label>Período<select value={period} onChange={event=>setPeriod(event.target.value)}><option value="todos">Todo o período</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option></select></label>
-    {hasFilters&&<button className="secondary clear-order-filters" onClick={clearFilters}><FilterX size={16}/> Limpar filtros</button>}
-   </div>
-   {error&&<p className="global-alert" role="alert">{error}</p>}
-   {loading?<div className="orders-empty"><p>Carregando pedidos…</p></div>:visible.length===0?<div className="orders-empty"><ShoppingBag size={30}/><h3>{hasFilters?'Nenhum pedido encontrado':'Nenhum pedido cadastrado'}</h3><p>{hasFilters?'Altere ou limpe os filtros para ampliar a consulta.':'Os pedidos aparecerão aqui quando forem registrados.'}</p></div>:<ul className="order-list">{visible.map(order=>{const overdue=Boolean(order.prazo_solicitado&&order.prazo_solicitado<today.toISOString().slice(0,10)&&!['entregue','cancelado','reprovado'].includes(order.status));return <li className="order-row" key={order.id}>
-    <div className="order-main"><strong>{orderNumber(order.numero)}</strong><span>{order.cliente_nome}</span><small>{order.items.length?order.items.map(item=>item.produto_nome).join(', '):'Itens ainda não informados'}</small></div>
-    <div className="order-field"><small>Vendedor</small><strong>{order.vendedor_nome}</strong></div>
-    <div className="order-field"><small>Data</small><strong>{formatDate(order.data_pedido)}</strong></div>
-    <div className={overdue?'order-field overdue':'order-field'}><small>Prazo</small><strong><CalendarDays size={14}/>{formatDate(order.prazo_solicitado)}</strong></div>
-    <div className="order-field order-value"><small>Total</small><strong>{reais.format(order.valor_total)}</strong></div>
-    <span className={`order-status status-${order.status}`}>{statusLabels[order.status]||order.status}</span>
-   </li>})}</ul>}
-   {!loading&&visible.length>0&&<p className="order-results">Exibindo {visible.length} de {orders.length} {orders.length===1?'pedido':'pedidos'}.</p>}
+ function clearForm(){setForm(emptyForm);setSelectedItems({});setEditingOrder(null);setFormOpen(false);setMessage('')}
+ function startCreate(){setEditingOrder(null);setSelectedItems({});setForm({...emptyForm,vendedor_cadastro_id:administrator?'':linkedSeller?.id||''});setMessage('');setSellerRegistryOpen(false);setFormOpen(true)}
+ function startEdit(order:Order){setEditingOrder(order);setForm({cliente_nome:order.cliente_nome,cliente_telefone:order.cliente_telefone||'',cliente_email:order.cliente_email||'',cliente_documento:order.cliente_documento||'',endereco_entrega:order.endereco_entrega||'',vendedor_cadastro_id:order.vendedor_cadastro_id||'',prazo_solicitado:order.prazo_solicitado||'',forma_pagamento:order.forma_pagamento||'',observacoes:order.observacoes||''});setSelectedItems(Object.fromEntries(order.items.filter(item=>item.produto_id).map(item=>[item.produto_id as string,{quantity:item.quantidade,price:item.preco_unitario}])));setSellerRegistryOpen(false);setFormOpen(true);setMessage('');window.setTimeout(()=>document.querySelector('.order-form')?.scrollIntoView({behavior:'smooth',block:'start'}),0)}
+ function toggleProduct(product:Product,checked:boolean){setSelectedItems(current=>{const next={...current};if(checked)next[product.airtable_record_id]={quantity:1,price:Number(product.preco_venda)||0};else delete next[product.airtable_record_id];return next})}
+ function changeQuantity(productId:string,value:number){setSelectedItems(current=>({...current,[productId]:{...current[productId],quantity:Math.max(1,Math.floor(value)||1)}}))}
+
+ async function saveOrder(targetStatus:'rascunho'|'aguardando_aprovacao'){
+  setMessage('');
+  if(!form.cliente_nome.trim()||!form.cliente_telefone.trim()){setMessage('Informe o nome e o telefone do cliente.');return}
+  if(!form.vendedor_cadastro_id){setMessage('Selecione o vendedor responsável.');return}
+  if(selectedProducts.length===0){setMessage('Adicione pelo menos um produto ao pedido.');return}
+  const selectedSeller=sellers.find(seller=>seller.id===form.vendedor_cadastro_id);
+  if(!selectedSeller){setMessage('O vendedor selecionado não está disponível.');return}
+  if(!administrator&&selectedSeller.usuario_id!==userId){setMessage('Seu usuário não está vinculado ao vendedor selecionado.');return}
+  setSaving(true);let orderId=editingOrder?.id||null;
+  try{
+   const values={cliente_nome:form.cliente_nome.trim(),cliente_telefone:form.cliente_telefone.trim(),cliente_email:form.cliente_email.trim()||null,cliente_documento:form.cliente_documento.trim()||null,endereco_entrega:form.endereco_entrega.trim()||null,vendedor_cadastro_id:selectedSeller.id,vendedor_id:selectedSeller.usuario_id,vendedor_nome:selectedSeller.nome,prazo_solicitado:form.prazo_solicitado||null,forma_pagamento:form.forma_pagamento||null,observacoes:form.observacoes.trim()||null,valor_total:Math.round(orderTotal*100)/100,atualizado_em:new Date().toISOString()};
+   if(!orderId){const {data,error:createError}=await supabase.from('farm_orders').insert({...values,status:'rascunho',ambiente:orderEnvironment}).select('id').single();if(createError||!data)throw createError||new Error('Pedido sem identificador');orderId=(data as {id:string}).id}
+   else{const {error:updateError}=await supabase.from('farm_orders').update(values).eq('id',orderId);if(updateError)throw updateError;const {error:deleteItemsError}=await supabase.from('farm_order_items').delete().eq('pedido_id',orderId);if(deleteItemsError)throw deleteItemsError}
+   const items=selectedProducts.map(product=>({pedido_id:orderId,produto_id:product.airtable_record_id,produto_nome:product.nome,quantidade:selectedItems[product.airtable_record_id].quantity,preco_unitario:selectedItems[product.airtable_record_id].price}));
+   const {error:itemsError}=await supabase.from('farm_order_items').insert(items);if(itemsError)throw itemsError;
+   const {error:statusError}=await supabase.from('farm_orders').update({status:targetStatus,atualizado_em:new Date().toISOString()}).eq('id',orderId);if(statusError)throw statusError;
+   clearForm();setMessage(targetStatus==='rascunho'?'Pedido salvo como rascunho.':'Pedido enviado para aprovação do administrador.');await load();
+  }catch{
+   if(editingOrder&&orderId){
+    await supabase.from('farm_orders').update({cliente_nome:editingOrder.cliente_nome,cliente_telefone:editingOrder.cliente_telefone,cliente_email:editingOrder.cliente_email,cliente_documento:editingOrder.cliente_documento,endereco_entrega:editingOrder.endereco_entrega,vendedor_cadastro_id:editingOrder.vendedor_cadastro_id,vendedor_id:editingOrder.vendedor_id,vendedor_nome:editingOrder.vendedor_nome,prazo_solicitado:editingOrder.prazo_solicitado,forma_pagamento:editingOrder.forma_pagamento,observacoes:editingOrder.observacoes,valor_total:editingOrder.valor_total,status:editingOrder.status}).eq('id',orderId);
+    await supabase.from('farm_order_items').delete().eq('pedido_id',orderId);
+    if(editingOrder.items.length)await supabase.from('farm_order_items').insert(editingOrder.items.map(item=>({pedido_id:orderId,...item})));
+   }else if(orderId)await supabase.from('farm_orders').delete().eq('id',orderId);
+   setMessage('Não foi possível salvar o pedido. Confira os dados e tente novamente.');
+  }finally{setSaving(false)}
+ }
+
+ async function cancelOrder(order:Order){const reason=window.prompt(`Informe o motivo do cancelamento do pedido ${orderNumber(order.numero)}:`)?.trim();if(!reason)return;const {error:cancelError}=await supabase.from('farm_orders').update({status:'cancelado',motivo_cancelamento:reason,cancelado_em:new Date().toISOString(),cancelado_por:userId,atualizado_em:new Date().toISOString()}).eq('id',order.id);if(cancelError)setMessage('Não foi possível cancelar o pedido.');else{setMessage(`Pedido ${orderNumber(order.numero)} cancelado.`);await load()}}
+ const canEdit=(order:Order)=>administrator?!['cancelado','entregue'].includes(order.status):['rascunho','devolvido_ajuste','aguardando_confirmacao_vendedor'].includes(order.status);
+ const canCancel=(order:Order)=>!['cancelado','entregue','reprovado'].includes(order.status)&&(administrator||order.vendedor_id===userId);
+
+ return <section className="orders-module" aria-label="Gestão de pedidos">
+  <div className="order-page-actions"><button onClick={startCreate} disabled={!administrator&&!linkedSeller}><Plus size={17}/> Criar pedido</button>{administrator&&<button className="secondary" onClick={()=>{setSellerRegistryOpen(!sellerRegistryOpen);setFormOpen(false)}}><Store size={17}/> {sellerRegistryOpen?'Fechar vendedores':'Cadastrar vendedores'}</button>}</div>
+  {!administrator&&!linkedSeller&&<div className="demo-note">Seu usuário ainda não está vinculado a um vendedor. Solicite o vínculo ao administrador para criar pedidos.</div>}
+  {sellerRegistryOpen&&administrator&&<SellerRegistry sellers={sellers} users={sellerUsers} onChanged={load} onClose={()=>setSellerRegistryOpen(false)}/>}
+  {formOpen&&<section className="panel order-form"><div className="orders-title"><div><h2>{editingOrder?`Alterar pedido ${orderNumber(editingOrder.numero)}`:'Criar pedido'}</h2><p className="muted">Preencha o cliente, o vendedor e os produtos do pedido.</p></div></div>
+   <div className="order-form-fields"><label>Cliente<input value={form.cliente_nome} onChange={event=>setForm({...form,cliente_nome:event.target.value})} required maxLength={160}/></label><label>Telefone ou WhatsApp<input value={form.cliente_telefone} onChange={event=>setForm({...form,cliente_telefone:event.target.value})} required inputMode="tel" maxLength={30}/></label><label>E-mail<input type="email" value={form.cliente_email} onChange={event=>setForm({...form,cliente_email:event.target.value})} maxLength={180}/></label><label>CPF/CNPJ<input value={form.cliente_documento} onChange={event=>setForm({...form,cliente_documento:event.target.value})} maxLength={30}/></label><label>Vendedor<select value={form.vendedor_cadastro_id} onChange={event=>setForm({...form,vendedor_cadastro_id:event.target.value})} required disabled={!administrator}><option value="">Selecione</option>{selectableSellers.map(item=><option key={item.id} value={item.id}>{item.nome}</option>)}</select></label><label>Prazo solicitado<input type="date" value={form.prazo_solicitado} onChange={event=>setForm({...form,prazo_solicitado:event.target.value})}/></label><label>Forma de pagamento<select value={form.forma_pagamento} onChange={event=>setForm({...form,forma_pagamento:event.target.value})}><option value="">Selecione</option><option>Pix</option><option>Dinheiro</option><option>Cartão de débito</option><option>Cartão de crédito</option><option>Transferência</option></select></label><label className="wide-field">Endereço de entrega<input value={form.endereco_entrega} onChange={event=>setForm({...form,endereco_entrega:event.target.value})} maxLength={300}/></label><label className="wide-field">Observações<textarea value={form.observacoes} onChange={event=>setForm({...form,observacoes:event.target.value})} rows={3} maxLength={1000}/></label></div>
+   <fieldset className="order-products"><legend>Produtos do Portfólio</legend>{products.length===0?<p className="muted">Nenhum produto publicado com preço disponível.</p>:products.map(product=>{const item=selectedItems[product.airtable_record_id];return <article className={item?'order-product selected':'order-product'} key={product.airtable_record_id}><label><input type="checkbox" checked={Boolean(item)} onChange={event=>toggleProduct(product,event.target.checked)}/>{product.foto_urls?.[0]?<img src={product.foto_urls[0]} alt=""/>:<span className="order-product-placeholder"><ShoppingBag size={18}/></span>}<span><strong>{product.nome}</strong><small>{reais.format(Number(product.preco_venda)||0)} · {product.estoque??0} em estoque</small></span></label>{item&&<label className="order-quantity">Quantidade<input type="number" min="1" step="1" value={item.quantity} onChange={event=>changeQuantity(product.airtable_record_id,Number(event.target.value))}/></label>}</article>})}</fieldset>
+   <div className="order-form-total"><span>Total do pedido</span><strong>{reais.format(orderTotal)}</strong></div>{message&&<output className="notice">{message}</output>}<div className="order-form-actions"><button disabled={saving} onClick={()=>void saveOrder('aguardando_aprovacao')}>{saving?'Salvando…':'Enviar para aprovação'}</button><button className="secondary" disabled={saving} onClick={()=>void saveOrder('rascunho')}>Salvar rascunho</button><button className="secondary" disabled={saving} onClick={clearForm}>Cancelar</button></div>
+  </section>}
+  <div className="order-metrics"><article><span className="order-metric-icon"><ShoppingBag size={20}/></span><div><small>Pedidos encontrados</small><strong>{visible.length}</strong></div></article><article><span className="order-metric-icon warning"><UserRoundCheck size={20}/></span><div><small>Aguardando aprovação</small><strong>{approvalCount}</strong></div></article><article><span className="order-metric-icon pricing"><Clock3 size={20}/></span><div><small>Em fluxo de precificação</small><strong>{pricingCount}</strong></div></article></div>
+  <section className="panel orders-panel"><div className="orders-title"><div><h2>Lista de pedidos</h2><p className="muted">Pesquise e acompanhe os pedidos {administrator?'de toda a equipe':'registrados por você'}.</p></div><button className="secondary" disabled={loading} onClick={()=>void load()}><RefreshCw size={16}/>{loading?'Atualizando…':'Atualizar'}</button></div>
+   {message&&!formOpen&&<output className="notice">{message}</output>}<div className="order-filters"><label className="order-search"><span>Pesquisar</span><span className="order-input-wrap"><Search size={17}/><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="Número, cliente ou produto"/></span></label><label>Status<select value={status} onChange={event=>setStatus(event.target.value)}><option value="todos">Todos os status</option>{statusOptions.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>{administrator&&<label>Vendedor<select value={sellerFilter} onChange={event=>setSellerFilter(event.target.value)}><option value="todos">Todos os vendedores</option>{sellerNames.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>}<label>Período<select value={period} onChange={event=>setPeriod(event.target.value)}><option value="todos">Todo o período</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option></select></label>{hasFilters&&<button className="secondary clear-order-filters" onClick={()=>{setQuery('');setStatus('todos');setSellerFilter('todos');setPeriod('todos')}}><FilterX size={16}/> Limpar filtros</button>}</div>
+   {error&&<p className="global-alert" role="alert">{error}</p>}{loading?<div className="orders-empty"><p>Carregando pedidos…</p></div>:visible.length===0?<div className="orders-empty"><ShoppingBag size={30}/><h3>{hasFilters?'Nenhum pedido encontrado':'Nenhum pedido cadastrado'}</h3><p>{hasFilters?'Altere ou limpe os filtros para ampliar a consulta.':'Crie o primeiro pedido para iniciar o acompanhamento.'}</p></div>:<ul className="order-list">{visible.map(order=>{const overdue=Boolean(order.prazo_solicitado&&order.prazo_solicitado<today.toISOString().slice(0,10)&&!['entregue','cancelado','reprovado'].includes(order.status));return <li className="order-row" key={order.id}><div className="order-main"><strong>{orderNumber(order.numero)}</strong><span>{order.cliente_nome}</span><small>{order.items.length?order.items.map(item=>item.produto_nome).join(', '):'Itens ainda não informados'}</small></div><div className="order-field"><small>Vendedor</small><strong>{order.vendedor_nome}</strong></div><div className="order-field"><small>Data</small><strong>{formatDate(order.data_pedido)}</strong></div><div className={overdue?'order-field overdue':'order-field'}><small>Prazo</small><strong><CalendarDays size={14}/>{formatDate(order.prazo_solicitado)}</strong></div><div className="order-field order-value"><small>Total</small><strong>{reais.format(order.valor_total)}</strong></div><span className={`order-status status-${order.status}`}>{statusLabels[order.status]||order.status}</span><div className="order-row-actions">{canEdit(order)&&<button className="secondary" onClick={()=>startEdit(order)}><Pencil size={14}/> Alterar</button>}{canCancel(order)&&<button className="cancel-order-button" onClick={()=>void cancelOrder(order)}><XCircle size={14}/> Cancelar pedido</button>}</div>{order.status==='cancelado'&&order.motivo_cancelamento&&<p className="cancellation-reason"><strong>Motivo:</strong> {order.motivo_cancelamento}</p>}</li>})}</ul>} {!loading&&visible.length>0&&<p className="order-results">Exibindo {visible.length} de {orders.length} {orders.length===1?'pedido':'pedidos'}.</p>}
   </section>
  </section>
 }
