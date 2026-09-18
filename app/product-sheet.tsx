@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useState} from 'react';
-import {Eraser,Save} from 'lucide-react';
+import {Archive,Clock3,Eraser,FolderOpen,Save,Search} from 'lucide-react';
 import {blank,example,calculate,normalizeSheet,number,type Sheet,type SupplyUse} from '@/lib/pricing';
 import {money} from '@/lib/demo';
 import {supabase} from '@/lib/supabase';
@@ -8,7 +8,10 @@ import {supabase} from '@/lib/supabase';
 type Unit='un'|'g'|'kg'|'ml'|'l'|'cm'|'m';
 type CatalogSupply={id:string;nome:string;valor_compra:number;quantidade_compra:number;unidade_medida:Unit;ativo:boolean};
 type CatalogPrinter={id:string;nome:string;potencia_watts:number;tarifa_energia_kwh:number;custo_maquina_hora:number;ativo:boolean};
+type CalculationResult=NonNullable<ReturnType<typeof calculate>['result']>;
+type CalculationSimulation={id:string;nome:string;sheet:Sheet;result:CalculationResult;created_at:string;updated_at:string};
 const key='sonho-product-sheet-v1';
+const environment=import.meta.env.BASE_URL.includes('/desenvolvimento/')?'desenvolvimento':'producao';
 const sortByStatusAndName=<T extends {ativo:boolean;nome:string}>(items:T[])=>items.sort((a,b)=>Number(b.ativo)-Number(a.ativo)||a.nome.localeCompare(b.nome,'pt-BR'));
 const groups=[
  {title:'Trabalho',hint:'Informe apenas o tempo de trabalho manual. Os materiais de acabamento e embalagem devem ser adicionados como insumos.',fields:[['minutes','Trabalho manual do lote (minutos)'],['labor','Mão de obra (R$/hora)'],['loss','Reserva de perdas dos insumos (%)']]},
@@ -24,6 +27,10 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
  const [status,setStatus]=useState('');
  const [saved,setSaved]=useState(false);
  const [saving,setSaving]=useState(false);
+ const [simulations,setSimulations]=useState<CalculationSimulation[]>([]);
+ const [simulationSearch,setSimulationSearch]=useState('');
+ const [simulationsLoading,setSimulationsLoading]=useState(true);
+ const [simulationSaving,setSimulationSaving]=useState(false);
  const {errors,result}=calculate(sheet);
 
  useEffect(()=>{let live=true;void (async()=>{
@@ -49,6 +56,8 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
 
  useEffect(()=>{if(loaded&&!saved)sessionStorage.setItem(draftKey,JSON.stringify(sheet))},[draftKey,loaded,saved,sheet]);
 
+ useEffect(()=>{let live=true;void (async()=>{setSimulationsLoading(true);const {data,error}=await supabase.from('farm_calculation_simulations').select('id,nome,sheet,result,created_at,updated_at').eq('user_id',userId).eq('ambiente',environment).order('updated_at',{ascending:false});if(live){setSimulations(error?[]:(data||[]) as CalculationSimulation[]);setSimulationsLoading(false);if(error)setStatus('A calculadora foi carregada, mas não foi possível buscar as simulações salvas.')}})();return()=>{live=false}},[userId]);
+
  const change=(k:keyof Sheet,v:string)=>{setSheet(current=>({...current,[k]:v}));setSaved(false);setStatus('Alterações ainda não salvas.')};
  const changeSupplies=(supplies:SupplyUse[])=>{setSheet(current=>({...current,supplies}));setSaved(false);setStatus('Alterações ainda não salvas.')};
  const costPerUnit=(supply:CatalogSupply)=>Number(supply.valor_compra)/Number(supply.quantidade_compra);
@@ -72,6 +81,31 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
   setSheet(sample);setSaved(false);setStatus('Exemplo carregado. Adicione os insumos usados no lote.');
  }
 
+ async function archiveSimulation(mode:'manual'|'product'){
+  if(!result)return null;
+  const {data,error}=await supabase.from('farm_calculation_simulations').insert({user_id:userId,ambiente:environment,nome:sheet.name.trim(),sheet,result,updated_at:new Date().toISOString()}).select('id,nome,sheet,result,created_at,updated_at').single();
+  if(error||!data)return null;
+  setSimulations(current=>[data as CalculationSimulation,...current]);
+  if(mode==='manual')setStatus('Simulação salva. Nenhum produto foi criado no Portfólio ou no Estoque.');
+  return data as CalculationSimulation;
+ }
+
+ async function saveSimulation(){
+  if(!result||saving||simulationSaving)return;
+  setSimulationSaving(true);setStatus('Salvando simulação…');
+  const {error:sheetError}=await supabase.from('farm_product_sheets').upsert({id:userId,sheet,updated_at:new Date().toISOString()},{onConflict:'id'});
+  if(sheetError){setStatus('Não foi possível salvar a ficha atual. Tente novamente.');setSimulationSaving(false);return}
+  const savedSimulation=await archiveSimulation('manual');
+  if(!savedSimulation)setStatus('Não foi possível arquivar a simulação. Tente novamente.');
+  setSimulationSaving(false);
+ }
+
+ function openSimulation(simulation:CalculationSimulation){
+  const restored=normalizeSheet(simulation.sheet);
+  if(!restored){setStatus('Esta simulação não possui uma ficha válida.');return}
+  setSheet(restored);setSaved(false);sessionStorage.setItem(draftKey,JSON.stringify(restored));setStatus(`Simulação “${simulation.nome}” carregada com todos os dados.`);window.scrollTo({top:0,behavior:'smooth'});
+ }
+
  async function saveProduct(){
   if(!result||saving)return;setSaving(true);setStatus('Salvando produto…');
   const {error:sheetError}=await supabase.from('farm_product_sheets').upsert({id:userId,sheet,updated_at:new Date().toISOString()},{onConflict:'id'});
@@ -82,7 +116,8 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
   const notes=`Criado pela calculadora. Custo por unidade: ${money(result.unit)}. Lote calculado: ${sheet.batch} peça(s). Impressora: ${sheet.printerName}.${supplies?` Insumos: ${supplies}.`:''}`;
   const {error:productError}=await supabase.from('farm_portfolio_products').insert({airtable_record_id:id,nome:sheet.name.trim(),categoria:null,categoria_id:null,preco_venda:price,tempo_producao_h:number(sheet.hours),estoque:0,ativo:true,observacoes:notes,exibir_portfolio:false,foto_urls:[]});
   if(productError){setStatus('A ficha foi salva, mas o produto não pôde ser criado no Portfólio. Tente novamente.');setSaving(false);return}
-  localStorage.removeItem(key);sessionStorage.removeItem(draftKey);setSaved(true);setStatus('Produto salvo, criado no Portfólio como não publicado e adicionado ao Estoque com saldo zero.');setSaving(false);
+  const calculationSaved=await archiveSimulation('product');
+  localStorage.removeItem(key);sessionStorage.removeItem(draftKey);setSaved(true);setStatus(calculationSaved?'Produto salvo e cálculo arquivado. O produto foi criado no Portfólio como não publicado e no Estoque com saldo zero.':'Produto criado no Portfólio e no Estoque, mas o cálculo não pôde ser arquivado.');setSaving(false);
  }
 
  async function clearSheet(){
@@ -94,7 +129,7 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
  function field(k:string,label:string){return <label key={k} htmlFor={`field-${k}`}>{label}<input id={`field-${k}`} inputMode="decimal" value={sheet[k as keyof Sheet] as string} onChange={event=>change(k as keyof Sheet,event.target.value)} aria-invalid={!!errors[k]} aria-describedby={errors[k]?`error-${k}`:undefined}/>{errors[k]&&<span className="field-error" id={`error-${k}`}>{errors[k]}</span>}</label>}
 
  return <div className="product-sheet">
-  <section className="panel"><div className="section-title"><div><h2>Ficha do seu produto</h2><p className="muted">Preencha os dados para calcular o custo e o preço sugerido.</p></div><span className="badge">{saved?'Produto criado':'Rascunho'}</span></div><p className="callout">Ao salvar, a ficha fica protegida na sua conta e o produto é criado no Portfólio como não publicado.</p><div className="actions"><button disabled={!loaded||!result||saving||saved} onClick={()=>void saveProduct()}><Save size={17}/>{saving?'Salvando…':saved?'Produto salvo':'Salvar produto'}</button><button className="secondary" disabled={!loaded||saving} onClick={()=>void clearSheet()}><Eraser size={17}/> Limpar</button><button className="secondary" disabled={saving} onClick={loadExample}>Preencher exemplo</button></div><output className="notice">{status}</output><label htmlFor="product-name">Nome do produto<input id="product-name" value={sheet.name} onChange={event=>change('name',event.target.value)} aria-invalid={!!errors.name} aria-describedby={errors.name?'name-error':undefined}/>{errors.name&&<span className="field-error" id="name-error">{errors.name}</span>}</label></section>
+  <section className="panel"><div className="section-title"><div><h2>Ficha do seu produto</h2><p className="muted">Preencha os dados para calcular o custo e o preço sugerido.</p></div><span className="badge">{saved?'Produto criado':'Rascunho'}</span></div><p className="callout">Você pode arquivar somente a simulação ou salvar o produto. Ao salvar o produto, o cálculo também será arquivado automaticamente.</p><div className="actions"><button disabled={!loaded||!result||saving||saved||simulationSaving} onClick={()=>void saveProduct()}><Save size={17}/>{saving?'Salvando…':saved?'Produto salvo':'Salvar produto'}</button><button className="secondary" disabled={!loaded||!result||saving||simulationSaving} onClick={()=>void saveSimulation()}><Archive size={17}/>{simulationSaving?'Salvando…':'Salvar simulação'}</button><button className="secondary" disabled={!loaded||saving||simulationSaving} onClick={()=>void clearSheet()}><Eraser size={17}/> Limpar</button><button className="secondary" disabled={saving||simulationSaving} onClick={loadExample}>Preencher exemplo</button></div><output className="notice">{status}</output><label htmlFor="product-name">Nome do produto<input id="product-name" value={sheet.name} onChange={event=>change('name',event.target.value)} aria-invalid={!!errors.name} aria-describedby={errors.name?'name-error':undefined}/>{errors.name&&<span className="field-error" id="name-error">{errors.name}</span>}</label></section>
 
   <div className="calculator-layout"><section className="panel calculator-result" aria-live="polite"><p className="eyebrow">RESULTADO DA FICHA</p><h2>{sheet.name||'Seu produto'}</h2>{!result?<><p className="callout">Cálculo incompleto. Revise os campos indicados abaixo. Campo vazio não significa custo zero.</p><p>{Object.keys(errors).length} {Object.keys(errors).length===1?'campo precisa':'campos precisam'} de revisão.</p></>:<><div className="result-pair"><div><small>Custo por unidade</small><strong>{money(result.unit)}</strong></div><div><small>Preço mínimo para a margem desejada</small><strong>{money(result.suggested)}</strong></div></div><dl>{result.parts.map(([name,value])=><div key={name}><dt>{name}</dt><dd>{money(value)}</dd></div>)}<div><dt>Custo do lote</dt><dd>{money(result.batch)}</dd></div><div><dt>Tarifa fixa + frete por unidade</dt><dd>{money(result.expenses)}</dd></div>{result.price!==null&&<><div><dt>Preço informado</dt><dd>{money(result.price)}</dd></div><div><dt>Taxas no preço informado</dt><dd>{money(result.price*result.rates)}</dd></div><div><dt>Contribuição por unidade</dt><dd>{money(result.contribution!)}</dd></div><div><dt>Margem no preço informado</dt><dd>{result.actualMargin!.toLocaleString('pt-BR',{maximumFractionDigits:2})}%</dd></div></>}</dl>{result.contribution!==null&&result.contribution<0&&<p className="field-error">O preço informado não cobre os custos e as despesas desta ficha.</p>}<p className="footnote">Margem é a parcela da venda que sobra após os custos e taxas informados. A sugestão é arredondada para cima no centavo.</p></>}</section>
 
@@ -106,5 +141,6 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
     {groups.map(group=><section className="panel" key={group.title}><h2>{group.title}</h2><p className="muted">{group.hint}</p><div className="fields">{group.fields.map(([fieldName,label])=>field(fieldName,label))}</div>{group.title==='Trabalho'&&<p className="footnote">A reserva de perdas é aplicada ao custo de todos os insumos adicionados. Preço sugerido = (custo unitário + tarifa fixa + frete) ÷ (1 − taxas percentuais − margem desejada).</p>}</section>)}
    </div>
   </div>
+  <section className="panel simulation-library"><div className="section-title"><div><p className="eyebrow">HISTÓRICO DE CÁLCULOS</p><h2>Simulações salvas</h2><p className="muted">Busque e reabra uma ficha com todos os valores usados no cálculo.</p></div><span className="badge">{simulations.length}</span></div><label className="simulation-search" htmlFor="simulation-search"><Search size={17}/><span>Buscar simulação</span><input id="simulation-search" value={simulationSearch} onChange={event=>setSimulationSearch(event.target.value)} placeholder="Nome do produto"/></label>{simulationsLoading?<p className="muted">Carregando simulações…</p>:simulations.length===0?<p className="callout">Nenhuma simulação salva neste ambiente.</p>:<div className="simulation-list">{simulations.filter(item=>item.nome.toLocaleLowerCase('pt-BR').includes(simulationSearch.trim().toLocaleLowerCase('pt-BR'))).map(item=><article key={item.id}><div><strong>{item.nome}</strong><span><Clock3 size={14}/>{new Date(item.updated_at).toLocaleString('pt-BR')}</span></div><dl><div><dt>Custo unitário</dt><dd>{money(Number(item.result.unit))}</dd></div><div><dt>Preço sugerido</dt><dd>{money(Number(item.result.suggested))}</dd></div></dl><button type="button" className="secondary" onClick={()=>openSimulation(item)}><FolderOpen size={16}/> Abrir cálculo</button></article>)}</div>}</section>
  </div>;
 }
