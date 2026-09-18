@@ -1,8 +1,8 @@
 export type SupplyUse={supplyId:string;name:string;quantity:string;unit:string;costPerUnit:string};
-export type Sheet={name:string;batch:string;supplies:SupplyUse[];hours:string;printerId:string;printerName:string;printerWatts:string;printerKwh:string;printerHourly:string;minutes:string;labor:string;loss:string;commission:string;payment:string;tax:string;fixed:string;shipping:string;margin:string;price:string};
+export type Sheet={name:string;batch:string;supplies:SupplyUse[];hours:string;printerId:string;printerName:string;printerWatts:string;printerKwh:string;printerHourly:string;minutes:string;labor:string;loss:string;commission:string;payment:string;tax:string;fixed:string;shipping:string;margin:string;price:string;productionDays:string};
 
-export const blank:Sheet={name:'',batch:'',supplies:[],hours:'',printerId:'',printerName:'',printerWatts:'',printerKwh:'',printerHourly:'',minutes:'',labor:'',loss:'',commission:'',payment:'',tax:'',fixed:'',shipping:'',margin:'',price:''};
-export const example:Sheet={name:'Vaso Aurora (exemplo)',batch:'10',supplies:[],hours:'6',printerId:'',printerName:'',printerWatts:'',printerKwh:'',printerHourly:'',minutes:'30',labor:'24',loss:'5',commission:'0',payment:'0',tax:'0',fixed:'0',shipping:'0',margin:'35',price:'20'};
+export const blank:Sheet={name:'',batch:'',supplies:[],hours:'',printerId:'',printerName:'',printerWatts:'',printerKwh:'',printerHourly:'',minutes:'',labor:'',loss:'',commission:'',payment:'',tax:'',fixed:'',shipping:'',margin:'',price:'',productionDays:''};
+export const example:Sheet={name:'Vaso Aurora (exemplo)',batch:'10',supplies:[],hours:'6',printerId:'',printerName:'',printerWatts:'',printerKwh:'',printerHourly:'',minutes:'30',labor:'24',loss:'5',commission:'0',payment:'0',tax:'0',fixed:'0',shipping:'0',margin:'35',price:'20',productionDays:'5'};
 
 export function number(v:string){
  if(!/^\d+(?:[.,]\d+)?$/.test(v.trim()))return NaN;
@@ -35,6 +35,7 @@ export function calculate(s:Sheet){
  });
 
  if(s.price.trim()&&(!Number.isFinite(number(s.price))||number(s.price)<=0))errors.price='Informe um preço maior que zero ou deixe vazio.';
+ if(s.productionDays.trim()&&(!Number.isInteger(number(s.productionDays))||number(s.productionDays)<1))errors.productionDays='Informe uma quantidade inteira de dias maior que zero ou deixe vazio.';
  if(Object.keys(errors).length)return {errors,result:null};
  const parts=[
   ['Insumos',supplies/n.batch],
@@ -82,7 +83,8 @@ export function normalizeSheet(v:unknown):Sheet|null{
  }:hasLegacyPrinter?{
   printerId:'legacy-printer',printerName:'Configuração anterior',printerWatts:source.watts as string,printerKwh:source.kwh as string,printerHourly:source.machine as string,
  }:{printerId:'',printerName:'',printerWatts:'',printerKwh:'',printerHourly:''};
- return Object.assign({},blank,Object.fromEntries(scalarKeys.map(k=>[k,source[k]])),printer,{supplies}) as Sheet;
+ const productionDays=typeof source.productionDays==='string'?source.productionDays:'';
+ return Object.assign({},blank,Object.fromEntries(scalarKeys.map(k=>[k,source[k]])),printer,{supplies,productionDays}) as Sheet;
 }
 
 export function validSheet(v:unknown):v is Sheet{return normalizeSheet(v)!==null;}
