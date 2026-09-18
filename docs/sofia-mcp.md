@@ -6,6 +6,8 @@ Endpoint remoto:
 
 O conector usa OAuth 2.1 com PKCE do Supabase. Cada pessoa autoriza a IA com sua própria conta do sistema, e as políticas de acesso do banco continuam sendo aplicadas.
 
+Durante a homologação, todos os comandos da Sofia ficam bloqueados no ambiente `desenvolvimento`. Aprovação, cancelamento e avanço de produção validam o ambiente do registro antes de executar a ação.
+
 ## Escopo do MVP
 
 - visão geral da operação;
