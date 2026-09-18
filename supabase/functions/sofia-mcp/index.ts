@@ -6,14 +6,14 @@ const SUPABASE_KEY=Deno.env.get('SUPABASE_ANON_KEY')!;
 const MCP_URL=`${SUPABASE_URL}/functions/v1/sofia-mcp`;
 const RESOURCE_METADATA=`${MCP_URL}/.well-known/oauth-protected-resource`;
 const AUTHORIZATION_SERVER=`${SUPABASE_URL}/auth/v1`;
-const MCP_ENVIRONMENT='desenvolvimento';
+const MCP_ENVIRONMENT='producao';
 const cors={'access-control-allow-origin':'*','access-control-allow-headers':'authorization, content-type, mcp-protocol-version','access-control-allow-methods':'GET, POST, OPTIONS'};
 
 type Json=Record<string,unknown>;
 type Profile={id:string;name:string;email:string;role:'administrador'|'vendedor';active:boolean};
 type Tool={name:string;description:string;inputSchema:Json;annotations?:Json};
 
-const environmentSchema={type:'string',enum:['desenvolvimento'],default:'desenvolvimento',description:'O MVP da Sofia está bloqueado no ambiente de desenvolvimento durante a homologação.'};
+const environmentSchema={type:'string',enum:['producao'],default:'producao',description:'A Sofia opera no ambiente oficial de produção.'};
 const tools:Tool[]=[
  {name:'visao_geral',description:'Mostra os totais atuais de portfólio, estoque, pedidos e produção.',inputSchema:{type:'object',properties:{ambiente:environmentSchema},required:['ambiente'],additionalProperties:false},annotations:{readOnlyHint:true}},
  {name:'buscar_portfolio',description:'Busca produtos e kits no portfólio por nome ou categoria. O link do arquivo de impressão só é retornado para administradores.',inputSchema:{type:'object',properties:{busca:{type:'string'},categoria:{type:'string'},incluir_ocultos:{type:'boolean',default:false}},additionalProperties:false},annotations:{readOnlyHint:true}},
@@ -90,13 +90,13 @@ async function invoke(name:string,args:Json,db:SupabaseClient,profile:Profile){
   adminOnly(profile);const nome=String(args.nome||'').trim();if(!nome)throw new Error('Informe o nome da simulação.');const {data,error}=await db.from('farm_calculation_simulations').insert({ambiente,nome,sheet:args.ficha,result:args.result}).select('id,nome,ambiente,created_at').single();if(error)throw error;return {mensagem:'Simulação salva sem criar produto.',simulacao:data};
  }
  if(name==='aprovar_pedido'){
-  adminOnly(profile);const pedidoId=String(args.pedido_id);const {data:order,error:orderError}=await db.from('farm_orders').select('id').eq('id',pedidoId).eq('ambiente',ambiente).maybeSingle();if(orderError)throw orderError;if(!order)throw new Error('Pedido não encontrado no ambiente de desenvolvimento.');const {data,error}=await db.rpc('farm_approve_order',{p_order_id:pedidoId});if(error)throw error;return {mensagem:'Pedido aprovado no desenvolvimento; estoque e produção atualizados pelas regras do sistema.',resultado:data};
+  adminOnly(profile);const pedidoId=String(args.pedido_id);const {data:order,error:orderError}=await db.from('farm_orders').select('id').eq('id',pedidoId).eq('ambiente',ambiente).maybeSingle();if(orderError)throw orderError;if(!order)throw new Error('Pedido não encontrado no ambiente de produção.');const {data,error}=await db.rpc('farm_approve_order',{p_order_id:pedidoId});if(error)throw error;return {mensagem:'Pedido aprovado em produção; estoque e produção atualizados pelas regras do sistema.',resultado:data};
  }
  if(name==='cancelar_pedido'){
-  const motivo=String(args.motivo||'').trim();if(motivo.length<3)throw new Error('Informe o motivo do cancelamento.');const pedidoId=String(args.pedido_id);const {data:order,error:orderError}=await db.from('farm_orders').select('id').eq('id',pedidoId).eq('ambiente',ambiente).maybeSingle();if(orderError)throw orderError;if(!order)throw new Error('Pedido não encontrado no ambiente de desenvolvimento.');const {data,error}=await db.rpc('farm_cancel_order',{p_order_id:pedidoId,p_reason:motivo});if(error)throw error;return {mensagem:'Pedido cancelado no desenvolvimento e estoque restituído conforme as regras do sistema.',resultado:data};
+  const motivo=String(args.motivo||'').trim();if(motivo.length<3)throw new Error('Informe o motivo do cancelamento.');const pedidoId=String(args.pedido_id);const {data:order,error:orderError}=await db.from('farm_orders').select('id').eq('id',pedidoId).eq('ambiente',ambiente).maybeSingle();if(orderError)throw orderError;if(!order)throw new Error('Pedido não encontrado no ambiente de produção.');const {data,error}=await db.rpc('farm_cancel_order',{p_order_id:pedidoId,p_reason:motivo});if(error)throw error;return {mensagem:'Pedido cancelado em produção e estoque restituído conforme as regras do sistema.',resultado:data};
  }
  if(name==='avancar_producao'){
-  adminOnly(profile);const id=String(args.ordem_producao_id);const {data:current,error:readError}=await db.from('farm_production_orders').select('id,pedido_id,produto_nome,status').eq('id',id).eq('ambiente',ambiente).single();if(readError)throw new Error('Ordem de produção não encontrada no ambiente de desenvolvimento.');const next:Record<string,string>={analise_produto:'aguardando_producao',aguardando_producao:'em_impressao',em_impressao:'acabamento',acabamento:'pronto'};const newStatus=next[current.status];if(!newStatus)throw new Error('Esta ordem não possui uma próxima etapa.');const {error}=await db.from('farm_production_orders').update({status:newStatus,atualizado_em:new Date().toISOString()}).eq('id',id).eq('ambiente',ambiente);if(error)throw error;if(newStatus==='pronto'){const {data:siblings}=await db.from('farm_production_orders').select('status').eq('pedido_id',current.pedido_id).eq('ambiente',ambiente);if((siblings||[]).every(row=>row.status==='pronto'||row.status==='cancelado'))await db.from('farm_orders').update({status:'pronto',atualizado_em:new Date().toISOString()}).eq('id',current.pedido_id).eq('ambiente',ambiente)}return {mensagem:`${current.produto_nome} avançou para ${newStatus} no desenvolvimento.`,status:newStatus};
+  adminOnly(profile);const id=String(args.ordem_producao_id);const {data:current,error:readError}=await db.from('farm_production_orders').select('id,pedido_id,produto_nome,status').eq('id',id).eq('ambiente',ambiente).single();if(readError)throw new Error('Ordem de produção não encontrada no ambiente de produção.');const next:Record<string,string>={analise_produto:'aguardando_producao',aguardando_producao:'em_impressao',em_impressao:'acabamento',acabamento:'pronto'};const newStatus=next[current.status];if(!newStatus)throw new Error('Esta ordem não possui uma próxima etapa.');const {error}=await db.from('farm_production_orders').update({status:newStatus,atualizado_em:new Date().toISOString()}).eq('id',id).eq('ambiente',ambiente);if(error)throw error;if(newStatus==='pronto'){const {data:siblings}=await db.from('farm_production_orders').select('status').eq('pedido_id',current.pedido_id).eq('ambiente',ambiente);if((siblings||[]).every(row=>row.status==='pronto'||row.status==='cancelado'))await db.from('farm_orders').update({status:'pronto',atualizado_em:new Date().toISOString()}).eq('id',current.pedido_id).eq('ambiente',ambiente)}return {mensagem:`${current.produto_nome} avançou para ${newStatus} em produção.`,status:newStatus};
  }
  throw new Error(`Ferramenta desconhecida: ${name}`);
 }
@@ -116,7 +116,7 @@ Deno.serve(async request=>{
  if(profileError||!profile||!profile.active)return json({error:'Conta não aprovada ou sem acesso.'},403);
  let body:Json;try{body=await request.json()}catch{return rpcError(null,-32700,'JSON inválido.')}
  const id=body.id??null,method=String(body.method||'');
- if(method==='initialize')return rpcResult(id,{protocolVersion:'2025-06-18',capabilities:{tools:{listChanged:false}},serverInfo:{name:'sofia-sonho-em-camadas-3d',title:'Sofia · Sonho em Camadas 3D',version:'0.1.1'},instructions:'Use as ferramentas para responder em português. Este MVP opera exclusivamente no ambiente de desenvolvimento. Confirme com o usuário antes de cancelar pedidos.'});
+ if(method==='initialize')return rpcResult(id,{protocolVersion:'2025-06-18',capabilities:{tools:{listChanged:false}},serverInfo:{name:'sofia-sonho-em-camadas-3d',title:'Sofia · Sonho em Camadas 3D',version:'1.0.0'},instructions:'Use as ferramentas para responder em português. Este serviço opera exclusivamente no ambiente oficial de produção. Confirme com o usuário antes de cancelar pedidos.'});
  if(method==='notifications/initialized')return new Response(null,{status:202,headers:cors});
  if(method==='ping')return rpcResult(id,{});
  if(method==='tools/list')return rpcResult(id,{tools});

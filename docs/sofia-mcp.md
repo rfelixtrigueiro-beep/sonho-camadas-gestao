@@ -6,7 +6,7 @@ Endpoint remoto:
 
 O conector usa OAuth 2.1 com PKCE do Supabase. Cada pessoa autoriza a IA com sua própria conta do sistema, e as políticas de acesso do banco continuam sendo aplicadas.
 
-Durante a homologação, todos os comandos da Sofia ficam bloqueados no ambiente `desenvolvimento`. Aprovação, cancelamento e avanço de produção validam o ambiente do registro antes de executar a ação.
+Em produção, todos os comandos da Sofia ficam bloqueados no ambiente `producao`. Aprovação, cancelamento e avanço de produção validam o ambiente do registro antes de executar a ação.
 
 ## Escopo do MVP
 
@@ -28,6 +28,4 @@ A conversão de voz em texto é responsabilidade do ChatGPT ou da plataforma con
 
 - servidor OAuth 2.1: ativo;
 - registro dinâmico de clientes: ativo;
-- página de autorização durante a homologação: `https://gestao.sonhoemcamadas3d.com.br/desenvolvimento/oauth/consent.html`.
-
-Ao promover a funcionalidade para produção, alterar o caminho de autorização para `/oauth/consent.html`.
+- página de autorização: `https://gestao.sonhoemcamadas3d.com.br/oauth/consent.html`.
