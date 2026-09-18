@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useState} from 'react';
-import {Archive,Clock3,Eraser,FileText,FolderOpen,Save,Search} from 'lucide-react';
+import {Archive,Clock3,Eraser,FileText,FolderOpen,Save,Search,Trash2} from 'lucide-react';
 import {blank,example,calculate,normalizeSheet,number,type Sheet,type SupplyUse} from '@/lib/pricing';
 import {money} from '@/lib/demo';
 import {supabase} from '@/lib/supabase';
@@ -16,7 +16,7 @@ const environment=import.meta.env.BASE_URL.includes('/desenvolvimento/')?'desenv
 const sortByStatusAndName=<T extends {ativo:boolean;nome:string}>(items:T[])=>items.sort((a,b)=>Number(b.ativo)-Number(a.ativo)||a.nome.localeCompare(b.nome,'pt-BR'));
 const groups=[
  {title:'Trabalho',hint:'Informe apenas o tempo de trabalho manual. Os materiais de acabamento e embalagem devem ser adicionados como insumos.',fields:[['minutes','Trabalho manual do lote (minutos)'],['labor','Mão de obra (R$/hora)'],['loss','Reserva de perdas dos insumos (%)']]},
- {title:'Canal de venda',hint:'Taxas percentuais incidem sobre o preço final efetivamente cobrado. Valores fixos e frete são por unidade vendida. Use 0 onde não se aplica.',fields:[['commission','Comissão (%)'],['payment','Taxa de pagamento (%)'],['tax','Impostos (%)'],['fixed','Tarifa fixa por unidade (R$)'],['shipping','Frete pago por você por unidade (R$)'],['margin','Margem desejada sobre a venda (%)'],['price','Preço final que pretende cobrar (R$) — opcional']]},
+ {title:'Canal de venda',hint:'Taxas percentuais incidem sobre o preço final efetivamente cobrado. Valores fixos e frete são por unidade vendida. Use 0 onde não se aplica.',fields:[['commission','Comissão (%)'],['payment','Taxa de pagamento (%)'],['tax','Impostos (%)'],['fixed','Tarifa fixa por unidade (R$)'],['shipping','Frete pago por você por unidade (R$)'],['margin','Margem desejada sobre a venda (%)'],['price','Preço final que pretende cobrar (R$) — opcional'],['productionDays','Dias para produção (opcional)']]},
 ];
 
 async function loadPdfImage(url:string):Promise<PdfImage|null>{
@@ -39,6 +39,7 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
  const [simulationSaving,setSimulationSaving]=useState(false);
  const [quoteGenerating,setQuoteGenerating]=useState(false);
  const [editingSimulationId,setEditingSimulationId]=useState('');
+ const [deletingSimulationId,setDeletingSimulationId]=useState('');
  const {errors,result}=calculate(sheet);
 
  useEffect(()=>{let live=true;void (async()=>{
@@ -124,6 +125,15 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
 
  function cancelSimulationEditing(){setEditingSimulationId('');sessionStorage.removeItem(editingKey);setStatus('Edição do cálculo cancelada. Os dados atuais continuam na calculadora como rascunho.')}
 
+ async function deleteSimulation(simulation:CalculationSimulation){
+  if(deletingSimulationId||!window.confirm(`Excluir permanentemente a simulação “${simulation.nome}”? Esta ação não pode ser desfeita.`))return;
+  setDeletingSimulationId(simulation.id);setStatus('Excluindo simulação…');
+  const {error}=await supabase.from('farm_calculation_simulations').delete().eq('id',simulation.id).eq('user_id',userId).eq('ambiente',environment);
+  if(error)setStatus('Não foi possível excluir a simulação. Tente novamente.');
+  else{setSimulations(current=>current.filter(item=>item.id!==simulation.id));if(editingSimulationId===simulation.id){setEditingSimulationId('');sessionStorage.removeItem(editingKey);setStatus('Simulação excluída. Os dados continuam na calculadora como rascunho.')}else setStatus('Simulação excluída do histórico.');}
+  setDeletingSimulationId('');
+ }
+
  async function saveProduct(){
   if(!result||saving)return;setSaving(true);setStatus('Salvando produto…');
   const {error:sheetError}=await supabase.from('farm_product_sheets').upsert({id:userId,sheet,updated_at:new Date().toISOString()},{onConflict:'id'});
@@ -172,7 +182,7 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
 
    doc.setFillColor(237,245,244);doc.roundedRect(112,126,pageWidth-margin-112,22,2,2,'F');doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(18,100,84);doc.text('VALOR TOTAL',118,134);doc.setFont('helvetica','bold');doc.setFontSize(17);doc.text(money(total),pageWidth-margin-5,143,{align:'right'});
    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(23,52,65);doc.text('Informações do orçamento',margin,165);
-   doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(86,101,115);const details=[`Quantidade: ${quantity.toLocaleString('pt-BR')} peça${quantity===1?'':'s'}.`,`Tempo estimado de impressão do lote: ${number(sheet.hours).toLocaleString('pt-BR')} hora${number(sheet.hours)===1?'':'s'}.`,`Impressora prevista: ${sheet.printerName}.`,'Condições de pagamento e prazo de entrega: a combinar.'];doc.text(details.map(item=>`• ${item}`),margin,174,{lineHeightFactor:1.7,maxWidth:contentWidth});
+   doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(86,101,115);const productionDays=sheet.productionDays.trim()?number(sheet.productionDays):null;const details=[`Quantidade: ${quantity.toLocaleString('pt-BR')} peça${quantity===1?'':'s'}.`,productionDays===null?'Prazo de produção: a combinar.':`Prazo de produção: ${productionDays.toLocaleString('pt-BR')} dia${productionDays===1?'':'s'}.`,`Impressora prevista: ${sheet.printerName}.`,'Condições de pagamento: a combinar.'];doc.text(details.map(item=>`• ${item}`),margin,174,{lineHeightFactor:1.7,maxWidth:contentWidth});
    doc.setDrawColor(220,227,233);doc.line(margin,274,pageWidth-margin,274);doc.setFontSize(7.5);doc.setTextColor(113,131,142);doc.text('Orçamento gerado pelo sistema de gestão Sonho em Camadas 3D.',margin,280);doc.text('Valores calculados a partir da ficha atual.',pageWidth-margin,280,{align:'right'});
    const filename=sheet.name.trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase()||'produto';
    doc.save(`orcamento-${filename}-${today.toISOString().slice(0,10)}.pdf`);setStatus('Orçamento gerado e baixado. A ficha e o estoque não foram alterados.');
@@ -194,6 +204,6 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
     {groups.map(group=><section className="panel" key={group.title}><h2>{group.title}</h2><p className="muted">{group.hint}</p><div className="fields">{group.fields.map(([fieldName,label])=>field(fieldName,label))}</div>{group.title==='Trabalho'&&<p className="footnote">A reserva de perdas é aplicada ao custo de todos os insumos adicionados. Preço sugerido = (custo unitário + tarifa fixa + frete) ÷ (1 − taxas percentuais − margem desejada).</p>}</section>)}
    </div>
   </div>
-  <section className="panel simulation-library"><div className="section-title"><div><p className="eyebrow">HISTÓRICO DE CÁLCULOS</p><h2>Simulações salvas</h2><p className="muted">Busque, edite e atualize uma ficha com todos os valores usados no cálculo.</p></div><span className="badge">{simulations.length}</span></div><label className="simulation-search" htmlFor="simulation-search"><Search size={17}/><span>Buscar simulação</span><input id="simulation-search" value={simulationSearch} onChange={event=>setSimulationSearch(event.target.value)} placeholder="Nome do produto"/></label>{simulationsLoading?<p className="muted">Carregando simulações…</p>:simulations.length===0?<p className="callout">Nenhuma simulação salva neste ambiente.</p>:<div className="simulation-list">{simulations.filter(item=>item.nome.toLocaleLowerCase('pt-BR').includes(simulationSearch.trim().toLocaleLowerCase('pt-BR'))).map(item=><article key={item.id}><div><strong>{item.nome}</strong><span><Clock3 size={14}/>{new Date(item.updated_at).toLocaleString('pt-BR')}</span></div><dl><div><dt>Custo unitário</dt><dd>{money(Number(item.result.unit))}</dd></div><div><dt>Preço sugerido</dt><dd>{money(Number(item.result.suggested))}</dd></div></dl><button type="button" className="secondary" disabled={editingSimulationId===item.id} onClick={()=>openSimulation(item)}><FolderOpen size={16}/>{editingSimulationId===item.id?'Em edição':'Editar cálculo'}</button></article>)}</div>}</section>
+  <section className="panel simulation-library"><div className="section-title"><div><p className="eyebrow">HISTÓRICO DE CÁLCULOS</p><h2>Simulações salvas</h2><p className="muted">Busque, edite, atualize ou exclua uma ficha de cálculo.</p></div><span className="badge">{simulations.length}</span></div><label className="simulation-search" htmlFor="simulation-search"><Search size={17}/><span>Buscar simulação</span><input id="simulation-search" value={simulationSearch} onChange={event=>setSimulationSearch(event.target.value)} placeholder="Nome do produto"/></label>{simulationsLoading?<p className="muted">Carregando simulações…</p>:simulations.length===0?<p className="callout">Nenhuma simulação salva neste ambiente.</p>:<div className="simulation-list">{simulations.filter(item=>item.nome.toLocaleLowerCase('pt-BR').includes(simulationSearch.trim().toLocaleLowerCase('pt-BR'))).map(item=><article key={item.id}><div><strong>{item.nome}</strong><span><Clock3 size={14}/>{new Date(item.updated_at).toLocaleString('pt-BR')}</span></div><dl><div><dt>Custo unitário</dt><dd>{money(Number(item.result.unit))}</dd></div><div><dt>Preço sugerido</dt><dd>{money(Number(item.result.suggested))}</dd></div></dl><div className="simulation-actions"><button type="button" className="secondary" disabled={editingSimulationId===item.id||Boolean(deletingSimulationId)} onClick={()=>openSimulation(item)}><FolderOpen size={16}/>{editingSimulationId===item.id?'Em edição':'Editar cálculo'}</button><button type="button" className="simulation-delete" disabled={Boolean(deletingSimulationId)} onClick={()=>void deleteSimulation(item)}><Trash2 size={16}/>{deletingSimulationId===item.id?'Excluindo…':'Excluir'}</button></div></article>)}</div>}</section>
  </div>;
 }
