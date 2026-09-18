@@ -22,8 +22,10 @@ Comandos de escrita exigem as mesmas permissões do sistema. Cancelamento de ped
 
 A conversão de voz em texto é responsabilidade do ChatGPT ou da plataforma conectada. A Sofia recebe a intenção já estruturada e executa a ferramenta correspondente.
 
-## Configuração pendente no Supabase
+## Configuração OAuth ativa no Supabase
 
-1. ativar o servidor OAuth 2.1;
-2. usar como página de autorização `https://gestao.sonhoemcamadas3d.com.br/oauth/consent/`;
-3. habilitar registro dinâmico de clientes para permitir a conexão pelo ChatGPT.
+- servidor OAuth 2.1: ativo;
+- registro dinâmico de clientes: ativo;
+- página de autorização durante a homologação: `https://gestao.sonhoemcamadas3d.com.br/desenvolvimento/oauth/consent.html`.
+
+Ao promover a funcionalidade para produção, alterar o caminho de autorização para `/oauth/consent.html`.
