@@ -1,7 +1,7 @@
 export type SupplyUse={supplyId:string;name:string;quantity:string;unit:string;costPerUnit:string};
 export type Sheet={name:string;batch:string;supplies:SupplyUse[];hours:string;printerId:string;printerName:string;printerWatts:string;printerKwh:string;printerHourly:string;minutes:string;labor:string;loss:string;commission:string;payment:string;tax:string;fixed:string;shipping:string;margin:string;price:string;productionDays:string};
 
-export const blank:Sheet={name:'',batch:'',supplies:[],hours:'',printerId:'',printerName:'',printerWatts:'',printerKwh:'',printerHourly:'',minutes:'',labor:'',loss:'',commission:'',payment:'',tax:'',fixed:'',shipping:'',margin:'',price:'',productionDays:''};
+export const blank:Sheet={name:'',batch:'',supplies:[],hours:'',printerId:'',printerName:'',printerWatts:'',printerKwh:'',printerHourly:'',minutes:'0',labor:'0',loss:'0',commission:'0',payment:'0',tax:'0',fixed:'0',shipping:'0',margin:'0',price:'0',productionDays:'0'};
 export const example:Sheet={name:'Vaso Aurora (exemplo)',batch:'10',supplies:[],hours:'6',printerId:'',printerName:'',printerWatts:'',printerKwh:'',printerHourly:'',minutes:'30',labor:'24',loss:'5',commission:'0',payment:'0',tax:'0',fixed:'0',shipping:'0',margin:'35',price:'20',productionDays:'5'};
 
 export function number(v:string){
@@ -34,8 +34,8 @@ export function calculate(s:Sheet){
   supplies+=quantity*costPerUnit;
  });
 
- if(s.price.trim()&&(!Number.isFinite(number(s.price))||number(s.price)<=0))errors.price='Informe um preço maior que zero ou deixe vazio.';
- if(s.productionDays.trim()&&(!Number.isInteger(number(s.productionDays))||number(s.productionDays)<1))errors.productionDays='Informe uma quantidade inteira de dias maior que zero ou deixe vazio.';
+ if(s.price.trim()&&number(s.price)!==0&&(!Number.isFinite(number(s.price))||number(s.price)<0))errors.price='Informe um preço válido ou use 0 quando não houver valor definido.';
+ if(s.productionDays.trim()&&number(s.productionDays)!==0&&(!Number.isInteger(number(s.productionDays))||number(s.productionDays)<1))errors.productionDays='Informe uma quantidade inteira de dias ou use 0 quando o prazo estiver a combinar.';
  if(Object.keys(errors).length)return {errors,result:null};
  const parts=[
   ['Insumos',supplies/n.batch],
@@ -47,7 +47,8 @@ export function calculate(s:Sheet){
  const unit=parts.reduce((sum,p)=>sum+p[1],0);
  const expenses=n.fixed+n.shipping;
  const suggested=(unit+expenses)/(1-rates-margin);
- const price=s.price.trim()?number(s.price):null;
+ const informedPrice=s.price.trim()?number(s.price):0;
+ const price=informedPrice>0?informedPrice:null;
  const contribution=price===null?null:price*(1-rates)-unit-expenses;
  if(![unit,suggested,...parts.map(p=>p[1])].every(Number.isFinite))return {errors:{batch:'Valores muito grandes para calcular. Revise a ficha.'},result:null};
  return {errors,result:{unit,batch:unit*n.batch,parts,suggested:Math.ceil(suggested*100-1e-9)/100,price,contribution,actualMargin:price===null?null:contribution!/price*100,rates,expenses}};
@@ -83,8 +84,10 @@ export function normalizeSheet(v:unknown):Sheet|null{
  }:hasLegacyPrinter?{
   printerId:'legacy-printer',printerName:'Configuração anterior',printerWatts:source.watts as string,printerKwh:source.kwh as string,printerHourly:source.machine as string,
  }:{printerId:'',printerName:'',printerWatts:'',printerKwh:'',printerHourly:''};
- const productionDays=typeof source.productionDays==='string'?source.productionDays:'';
- return Object.assign({},blank,Object.fromEntries(scalarKeys.map(k=>[k,source[k]])),printer,{supplies,productionDays}) as Sheet;
+ const productionDays=typeof source.productionDays==='string'?source.productionDays:blank.productionDays;
+ const normalized=Object.assign({},blank,Object.fromEntries(scalarKeys.map(k=>[k,source[k]])),printer,{supplies,productionDays}) as Sheet;
+ for(const key of ['minutes','labor','loss','commission','payment','tax','fixed','shipping','margin','price','productionDays'] as const)if(!normalized[key].trim())normalized[key]='0';
+ return normalized;
 }
 
 export function validSheet(v:unknown):v is Sheet{return normalizeSheet(v)!==null;}
