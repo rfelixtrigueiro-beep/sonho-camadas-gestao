@@ -85,7 +85,9 @@ export function normalizeSheet(v:unknown):Sheet|null{
   printerId:'legacy-printer',printerName:'Configuração anterior',printerWatts:source.watts as string,printerKwh:source.kwh as string,printerHourly:source.machine as string,
  }:{printerId:'',printerName:'',printerWatts:'',printerKwh:'',printerHourly:''};
  const productionDays=typeof source.productionDays==='string'?source.productionDays:blank.productionDays;
- return Object.assign({},blank,Object.fromEntries(scalarKeys.map(k=>[k,source[k]])),printer,{supplies,productionDays}) as Sheet;
+ const normalized=Object.assign({},blank,Object.fromEntries(scalarKeys.map(k=>[k,source[k]])),printer,{supplies,productionDays}) as Sheet;
+ for(const key of ['minutes','labor','loss','commission','payment','tax','fixed','shipping','margin','price','productionDays'] as const)if(!normalized[key].trim())normalized[key]='0';
+ return normalized;
 }
 
 export function validSheet(v:unknown):v is Sheet{return normalizeSheet(v)!==null;}
