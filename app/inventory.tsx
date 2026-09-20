@@ -1,52 +1,25 @@
 'use client';
-import {useEffect,useState} from 'react';
-import {Check, Pencil, RefreshCw, X} from 'lucide-react';
+import {useCallback,useEffect,useState} from 'react';
+import {Bookmark,Check,PackageOpen,RefreshCw,X} from 'lucide-react';
 import {Table,TableBody,TableCell,TableHead,TableHeader,TableRow} from '@/components/ui/table';
 import {supabase} from '@/lib/supabase';
 
-type InventoryProduct={airtable_record_id:string;nome:string;estoque:number|null;categoria:string|null;exibir_portfolio:boolean};
+type InventoryProduct={product_id:string;nome:string;categoria:string|null;exibir_portfolio:boolean;estoque_fisico:number;estoque_reservado_manual:number;estoque_reservado_automatico:number;estoque_reservado:number;estoque_disponivel:number};
+type Editing={id:string;field:'physical'|'manual'}|null;
+const environment=import.meta.env.BASE_URL.includes('/desenvolvimento/')?'desenvolvimento':'producao';
 
 export default function Inventory(){
- const [products,setProducts]=useState<InventoryProduct[]>([]);
- const [loading,setLoading]=useState(true);
- const [message,setMessage]=useState('');
- const [editingId,setEditingId]=useState<string|null>(null);
- const [stockValue,setStockValue]=useState('0');
- const [savingId,setSavingId]=useState<string|null>(null);
-
- async function refresh(){
-  setLoading(true);setMessage('');
-  const {data,error}=await supabase.from('farm_portfolio_products').select('airtable_record_id,nome,estoque,categoria,exibir_portfolio').eq('ativo',true).order('nome');
-  if(error){setProducts([]);setMessage('Não foi possível carregar o estoque. Tente novamente.')}else{setProducts((data||[]) as InventoryProduct[]);setMessage('Estoque atualizado.')}
-  setLoading(false);
- }
-
- useEffect(()=>{
-  let active=true;
-  void supabase.from('farm_portfolio_products').select('airtable_record_id,nome,estoque,categoria,exibir_portfolio').eq('ativo',true).order('nome').then(({data,error})=>{
-   if(!active)return;
-   if(error){setProducts([]);setMessage('Não foi possível carregar o estoque. Tente novamente.')}else{setProducts((data||[]) as InventoryProduct[])}
-   setLoading(false);
-  });
-  return()=>{active=false};
- },[]);
-
- function startEditing(product:InventoryProduct){setEditingId(product.airtable_record_id);setStockValue(String(product.estoque??0));setMessage('')}
- function cancelEditing(){setEditingId(null);setStockValue('0')}
- async function saveStock(product:InventoryProduct){
-  const nextStock=Number(stockValue);
-  if(!Number.isInteger(nextStock)||nextStock<0){setMessage('Informe uma quantidade inteira igual ou maior que zero.');return}
-  setSavingId(product.airtable_record_id);setMessage('');
-  const {data,error}=await supabase.from('farm_portfolio_products').update({estoque:nextStock,atualizado_em:new Date().toISOString()}).eq('airtable_record_id',product.airtable_record_id).select('airtable_record_id,estoque').single();
-  if(error||!data)setMessage('Não foi possível alterar o estoque. Tente novamente.');
-  else{const savedStock=Number(data.estoque);setProducts(current=>current.map(item=>item.airtable_record_id===product.airtable_record_id?{...item,estoque:savedStock}:item));setMessage(`${product.nome}: estoque atualizado para ${savedStock} ${savedStock===1?'unidade':'unidades'}.`);cancelEditing()}
-  setSavingId(null);
- }
+ const [products,setProducts]=useState<InventoryProduct[]>([]),[loading,setLoading]=useState(true),[message,setMessage]=useState(''),[editing,setEditing]=useState<Editing>(null),[quantity,setQuantity]=useState('0'),[saving,setSaving]=useState(false);
+ const load=useCallback(async(announce=false)=>{setLoading(true);const {data,error}=await supabase.rpc('farm_inventory_snapshot',{p_environment:environment});if(error){setProducts([]);setMessage('Não foi possível carregar o estoque. Tente novamente.')}else{setProducts(((data||[]) as InventoryProduct[]).map(item=>({...item,estoque_fisico:Number(item.estoque_fisico),estoque_reservado_manual:Number(item.estoque_reservado_manual),estoque_reservado_automatico:Number(item.estoque_reservado_automatico),estoque_reservado:Number(item.estoque_reservado),estoque_disponivel:Number(item.estoque_disponivel)})));if(announce)setMessage('Estoque atualizado.')}setLoading(false)},[]);
+ useEffect(()=>{const timer=window.setTimeout(()=>{void load()},0);return()=>window.clearTimeout(timer)},[load]);
+ function startEditing(product:InventoryProduct,field:'physical'|'manual'){setEditing({id:product.product_id,field});setQuantity(String(field==='physical'?product.estoque_fisico:product.estoque_reservado_manual));setMessage('')}
+ function cancelEditing(){setEditing(null);setQuantity('0')}
+ async function saveQuantity(product:InventoryProduct){const nextQuantity=Number(quantity);if(!Number.isInteger(nextQuantity)||nextQuantity<0){setMessage('Informe uma quantidade inteira igual ou maior que zero.');return}if(!editing)return;setSaving(true);setMessage('');const rpc=editing.field==='physical'?'farm_set_physical_stock':'farm_set_manual_reservation';const {error}=await supabase.rpc(rpc,{p_product_id:product.product_id,p_quantity:nextQuantity,p_environment:environment});if(error)setMessage(error.message||'Não foi possível salvar a alteração. Tente novamente.');else{const label=editing.field==='physical'?'Estoque físico':'Reserva manual';cancelEditing();await load();setMessage(`${product.nome}: ${label.toLocaleLowerCase('pt-BR')} atualizada para ${nextQuantity} ${nextQuantity===1?'unidade':'unidades'}.`)}setSaving(false)}
 
  return <section className="panel inventory-panel">
-  <div className="section-title"><div><h2>Estoque de produtos</h2><p className="muted">Produtos criados na calculadora entram automaticamente com saldo zero.</p></div><div className="inventory-heading-actions"><span className="badge">{products.length} {products.length===1?'produto':'produtos'}</span><button className="secondary" disabled={loading} onClick={()=>void refresh()}><RefreshCw size={16}/>{loading?'Atualizando…':'Atualizar'}</button></div></div>
-  <output className="notice">{message}</output>
-  {loading?<div className="empty"><p>Carregando estoque…</p></div>:products.length===0?<div className="empty"><p>Nenhum produto cadastrado no estoque.</p></div>:<section className="table-scroll" aria-label="Estoque de produtos cadastrados"><Table><TableHeader><TableRow><TableHead>Produto</TableHead><TableHead>Categoria</TableHead><TableHead>Físico</TableHead><TableHead>Reservado</TableHead><TableHead>Disponível</TableHead><TableHead>Ações</TableHead></TableRow></TableHeader><TableBody>{products.map(product=>{const stock=product.estoque??0,isEditing=editingId===product.airtable_record_id;return <TableRow key={product.airtable_record_id}><TableCell><strong>{product.nome}</strong>{!product.exibir_portfolio&&<small className="inventory-hidden-label">Oculto no Portfólio</small>}</TableCell><TableCell>{product.categoria||'Sem categoria'}</TableCell><TableCell>{stock}</TableCell><TableCell>0</TableCell><TableCell>{stock}</TableCell><TableCell>{isEditing?<div className="inventory-stock-editor"><label><span>Nova quantidade</span><input type="number" inputMode="numeric" min="0" step="1" value={stockValue} onChange={event=>setStockValue(event.target.value)}/></label><button type="button" disabled={savingId===product.airtable_record_id} onClick={()=>void saveStock(product)}><Check size={15}/>{savingId===product.airtable_record_id?'Salvando…':'Salvar'}</button><button type="button" className="secondary" disabled={savingId===product.airtable_record_id} onClick={cancelEditing}><X size={15}/>Cancelar</button></div>:<button type="button" className="secondary inventory-edit-button" onClick={()=>startEditing(product)}><Pencil size={15}/>Alterar estoque</button>}</TableCell></TableRow>})}</TableBody></Table></section>}
-  <p className="footnote">A reserva de pedidos será integrada ao estoque operacional em uma próxima etapa. Neste momento, reservado permanece zero.</p>
+  <div className="section-title"><div><h2>Estoque de produtos</h2><p className="muted">Acompanhe o saldo físico, as reservas dos pedidos e as reservas manuais.</p></div><div className="inventory-heading-actions"><span className="badge">{products.length} {products.length===1?'produto':'produtos'}</span><button className="secondary" disabled={loading} onClick={()=>void load(true)}><RefreshCw size={16}/>{loading?'Atualizando…':'Atualizar'}</button></div></div>
+  {message&&<output className="notice">{message}</output>}
+  {loading?<div className="empty"><p>Carregando estoque…</p></div>:products.length===0?<div className="empty"><p>Nenhum produto cadastrado no estoque.</p></div>:<section className="table-scroll" aria-label="Estoque de produtos cadastrados"><Table><TableHeader><TableRow><TableHead>Produto</TableHead><TableHead>Categoria</TableHead><TableHead>Físico</TableHead><TableHead>Reservado</TableHead><TableHead>Disponível</TableHead><TableHead>Ações</TableHead></TableRow></TableHeader><TableBody>{products.map(product=>{const isEditing=editing?.id===product.product_id;return <TableRow key={product.product_id}><TableCell><strong>{product.nome}</strong>{!product.exibir_portfolio&&<small className="inventory-hidden-label">Oculto no Portfólio</small>}</TableCell><TableCell>{product.categoria||'Sem categoria'}</TableCell><TableCell>{product.estoque_fisico}</TableCell><TableCell><strong>{product.estoque_reservado}</strong><small className="inventory-reserve-breakdown">{product.estoque_reservado_automatico} por pedidos · {product.estoque_reservado_manual} manual</small></TableCell><TableCell><strong className={product.estoque_disponivel===0?'inventory-zero':''}>{product.estoque_disponivel}</strong></TableCell><TableCell>{isEditing?<div className="inventory-stock-editor"><label><span>{editing.field==='physical'?'Estoque físico':'Reserva manual'}</span><input aria-label={editing.field==='physical'?'Nova quantidade física':'Nova reserva manual'} type="number" inputMode="numeric" min="0" step="1" value={quantity} onChange={event=>setQuantity(event.target.value)}/></label><button type="button" disabled={saving} onClick={()=>void saveQuantity(product)}><Check size={15}/>{saving?'Salvando…':'Salvar'}</button><button type="button" className="secondary" disabled={saving} onClick={cancelEditing}><X size={15}/>Cancelar</button></div>:<div className="inventory-action-buttons"><button type="button" className="secondary inventory-edit-button" onClick={()=>startEditing(product,'physical')}><PackageOpen size={15}/>Estoque</button><button type="button" className="secondary inventory-edit-button" onClick={()=>startEditing(product,'manual')}><Bookmark size={15}/>Reserva</button></div>}</TableCell></TableRow>})}</TableBody></Table></section>}
+  <p className="footnote">Pedidos aprovados reservam o saldo automaticamente. A reserva manual pode ser usada para separar unidades sem vínculo com um pedido. Ao marcar o pedido como entregue, a reserva é baixada do estoque físico; ao cancelar, ela é liberada.</p>
  </section>;
 }
