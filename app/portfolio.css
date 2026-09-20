@@ -95,6 +95,8 @@
 .product-file-link:focus-visible{outline:3px solid #c89d3c;outline-offset:3px;border-radius:3px}
 .product-dialog-actions{display:grid;gap:9px;margin-top:18px}
 .product-dialog-actions button{width:100%}
+.product-dialog-actions .portfolio-delete-button{border:1px solid #d9a8a8;background:#fff;color:#9b3434}
+.product-dialog-actions .portfolio-delete-button:hover{border-color:#b95b5b;background:#fff3f3}
 .product-edit-form{padding:24px 26px 26px}
 .product-edit-form .fields{grid-template-columns:repeat(2,minmax(0,1fr))}
 .product-edit-form select{display:block;width:100%;min-height:46px;margin:9px 0 16px;padding:12px;border:1px solid #bdcbd4;border-radius:8px;background:#fff;color:#173441;font:inherit}
