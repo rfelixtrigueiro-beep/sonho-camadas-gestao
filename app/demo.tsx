@@ -7,6 +7,7 @@ import Inventory from './inventory';
 import Orders from './orders';
 import Registries from './registries';
 import Production from './production';
+import Receivables from './receivables';
 import {LayoutDashboard,Package,ReceiptText,Printer,Boxes,Wallet,Images,Settings2,ArrowRight,Info} from 'lucide-react';
 import {SidebarProvider,Sidebar,SidebarContent,SidebarHeader,SidebarFooter,SidebarMenu,SidebarMenuItem,SidebarMenuButton,SidebarTrigger,useSidebar} from '@/components/ui/sidebar';
 
@@ -14,8 +15,6 @@ const nav=[['Visão geral',LayoutDashboard],['Produtos e custos',Package],['Pedi
 const descriptions=['Acompanhe e organize as atividades da Farm.','Calcule custos e crie produtos.','Consulte e gerencie os pedidos.','Acompanhe os itens em produção.','Consulte o saldo dos produtos.','Acompanhe os valores recebidos.','Consulte e organize os produtos disponíveis.','Gerencie insumos, impressoras e vendedores em um só lugar.'];
 
 function Menu({page,go,administrator}:{page:number;go:(v:number)=>void;administrator:boolean}){const {setOpenMobile}=useSidebar();return <Sidebar><SidebarHeader><div className="brand official-brand"><img src="brand/Logo_Otimizada_Preta.png" alt="Sonho em Camadas 3D — Ideias que ganham forma" width="180" height="178"/><small>GESTÃO DA FARM</small></div></SidebarHeader><SidebarContent><SidebarMenu>{nav.map(([label,Icon],i)=>!administrator&&[1,3,4,7].includes(i)?null:<SidebarMenuItem key={label}><SidebarMenuButton isActive={page===i} onClick={()=>{go(i);setOpenMobile(false)}}><Icon/><span>{label}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu></SidebarContent><SidebarFooter><div className="workspace"><span className="avatar">SC</span><div>Sonho em Camadas 3D<small>Sistema de gestão</small></div></div></SidebarFooter></Sidebar>}
-
-function EmptyModule({icon:Icon,title,text}:{icon:typeof ReceiptText;title:string;text:string}){return <section className="panel"><div className="empty"><Icon size={34}/><h2>{title}</h2><p>{text}</p></div></section>}
 
 export default function Demo({administrator,userId,boardOnly=false}:{administrator:boolean;userId:string;boardOnly?:boolean}){
  const sectionKey=`farm.activeSection.${userId}`;
@@ -32,7 +31,7 @@ export default function Demo({administrator,userId,boardOnly=false}:{administrat
  <div hidden={page!==2}><Orders administrator={administrator} userId={userId}/></div>
  {administrator&&<div hidden={page!==3}><Production administrator={administrator} userId={userId}/></div>}
  {administrator&&page===4&&<Inventory/>}
- {page===5&&<EmptyModule icon={Wallet} title="Nenhum recebimento cadastrado" text="Os recebimentos dos pedidos aparecerão aqui."/>}
+ <div hidden={page!==5}><Receivables administrator={administrator}/></div>
  <div hidden={page!==6}><Portfolio administrator={administrator} userId={userId}/></div>
  {administrator&&<div hidden={page!==7}><Registries onCatalogChanged={()=>setCatalogVersion(version=>version+1)}/></div>}
  <footer>SONHO EM CAMADAS 3D <span>Sistema de gestão</span></footer></div></main></SidebarProvider>;
