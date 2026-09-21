@@ -31,10 +31,13 @@
 .production-no-plates{display:block;padding:5px 0}
 .production-plate-editor{margin:0;padding:14px;border:1px solid #d7e1e5;border-radius:10px;background:#f8fafb}
 .production-plate-editor>legend{padding:0 7px;color:#294b55;font-size:13px;font-weight:800}
+.production-plate-total{margin:0 0 10px;padding:9px 11px;border-radius:8px;font-size:12px}
+.production-plate-total.valid{background:#e7f3ed;color:#176149}
+.production-plate-total.invalid{background:#fff1e5;color:#925018}
 .production-plate-editor article{padding:12px;border:1px solid #dce6e8;border-radius:9px;background:#fff}
 .production-plate-editor article+article{margin-top:10px}
 .production-plate-editor article>header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
-.production-plate-editor article>div{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:10px}
+.production-plate-editor article>div{display:grid;grid-template-columns:1.25fr .8fr .8fr 1.35fr;gap:10px}
 .production-plate-editor .production-plate-check{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600}
 .production-plate-editor .production-plate-check input{width:17px;height:17px;margin:0;accent-color:#176149}
 .production-kanban-card .production-plates{padding:8px}
@@ -46,5 +49,4 @@
  .production-card:hover{transform:none}
  .production-dialog{width:calc(100vw - 20px)!important;padding:20px!important}
  .production-plate-editor article>div{grid-template-columns:1fr 1fr}
- .production-plate-editor article>div label:last-child{grid-column:1/-1}
 }
