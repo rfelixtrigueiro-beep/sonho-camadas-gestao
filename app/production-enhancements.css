@@ -26,6 +26,7 @@
 .production-source-picker small,.production-create-portfolio small{color:#657780;font-size:12px;font-weight:400;line-height:1.4}
 .production-source-picker label:has(input:checked){border-color:#6ca393;background:#edf7f2}
 .production-create-portfolio{background:#f4f8f7}
+.production-portfolio-link{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:10px;padding:13px;border:1px solid #dce5e8;border-radius:9px;background:#f8fafb}.production-portfolio-link label{margin:0}.production-portfolio-link input[readonly]{color:#405861;background:#eef3f4}.production-portfolio-link a{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:9px 13px;text-decoration:none;white-space:nowrap}.production-portfolio-link>small{grid-column:1/-1;color:#7a6262;font-size:12px}
 .production-form .danger-button{background:#a53d3d!important;color:#fff!important}
 .production-form .danger-button:hover{background:#852f2f!important}
 .production-plates{grid-column:1/-1;padding:11px;border:1px solid #dce6e8;border-radius:10px;background:#f8fafb}
@@ -71,6 +72,7 @@
  .production-dialog{width:calc(100vw - 20px)!important;padding:20px!important}
  .production-plate-editor article>div{grid-template-columns:1fr 1fr}
  .production-source-picker{grid-template-columns:1fr}
+ .production-portfolio-link{grid-template-columns:1fr}.production-portfolio-link a{width:100%}
  .production-wallboard{padding:10px}
  .production-wallboard-header{margin:-10px -10px 10px;padding:8px 12px}
  .production-wallboard-header strong{font-size:17px}
