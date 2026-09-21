@@ -17,6 +17,15 @@
 .production-form .field-hint{display:block;margin:7px 0 0;color:#657480;font-size:12px;font-weight:400;line-height:1.45}
 .production-form .optional-label{color:#71828a;font-size:11px;font-weight:500}
 .production-main .production-delivery{margin-top:3px;color:#315f69;font-weight:700}
+.production-main .production-source{margin-top:3px;color:#176149;font-weight:700}
+.production-source-picker{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0;padding:14px;border:1px solid #d7e1e5;border-radius:11px;background:#f8fafb}
+.production-source-picker legend{padding:0 7px;color:#294b55;font-size:13px;font-weight:800}
+.production-source-picker>label,.production-create-portfolio{display:flex!important;align-items:flex-start;gap:10px;padding:13px;border:1px solid #dce5e8;border-radius:9px;background:#fff;cursor:pointer}
+.production-source-picker input,.production-create-portfolio input{width:18px!important;height:18px!important;flex:0 0 auto;margin:1px 0 0!important;accent-color:#176149}
+.production-source-picker span,.production-create-portfolio span{display:grid;gap:4px}
+.production-source-picker small,.production-create-portfolio small{color:#657780;font-size:12px;font-weight:400;line-height:1.4}
+.production-source-picker label:has(input:checked){border-color:#6ca393;background:#edf7f2}
+.production-create-portfolio{background:#f4f8f7}
 .production-form .danger-button{background:#a53d3d!important;color:#fff!important}
 .production-form .danger-button:hover{background:#852f2f!important}
 .production-plates{grid-column:1/-1;padding:11px;border:1px solid #dce6e8;border-radius:10px;background:#f8fafb}
@@ -61,6 +70,7 @@
  .production-card:hover{transform:none}
  .production-dialog{width:calc(100vw - 20px)!important;padding:20px!important}
  .production-plate-editor article>div{grid-template-columns:1fr 1fr}
+ .production-source-picker{grid-template-columns:1fr}
  .production-wallboard{padding:10px}
  .production-wallboard-header{margin:-10px -10px 10px;padding:8px 12px}
  .production-wallboard-header strong{font-size:17px}
