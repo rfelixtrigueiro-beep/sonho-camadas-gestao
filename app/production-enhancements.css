@@ -2,25 +2,49 @@
 .production-card-hit{position:absolute!important;inset:0!important;z-index:1!important;width:100%!important;height:100%!important;min-height:0!important;padding:0!important;border:0!important;border-radius:inherit!important;background:transparent!important;color:transparent!important;box-shadow:none!important}
 .production-card-hit:focus-visible{outline:3px solid #c89d3c!important;outline-offset:3px!important}
 .production-card>*:not(.production-card-hit){position:relative;z-index:2;pointer-events:none}
-.production-card .production-actions{pointer-events:auto}
+.production-card .production-actions,.production-card .production-plates{pointer-events:auto}
 .production-card:hover{border-color:#9cb9b6;box-shadow:0 8px 22px rgba(27,57,68,.08);transform:translateY(-1px)}
 .production-card:focus-visible{outline:3px solid #c89d3c;outline-offset:3px}
 .production-dialog{width:min(92vw,680px)!important;max-width:680px!important;max-height:92vh;overflow:auto;padding:26px!important}
 .production-dialog [data-slot=dialog-header]{padding-right:34px}
 .production-form{margin-top:4px}
-.production-form-fields{display:grid;grid-template-columns:2fr .75fr 1.2fr;gap:14px;margin:18px 0}
+.production-form-fields{display:grid;grid-template-columns:2fr .7fr .8fr 1.2fr;gap:14px;margin:18px 0}
 .production-form-fields label{margin:0}
 .production-form-fields input,.production-form-fields select,.production-form-fields textarea{display:block;width:100%;margin:7px 0 0;padding:10px 12px;border:1px solid #bdcbd4;border-radius:8px;background:#fff;color:#173441;font:inherit}
 .production-form-fields textarea{resize:vertical}
 .production-form-fields input[type=file]{padding:9px}
 .production-form-fields .wide-field{grid-column:1/-1}
 .production-form .field-hint{display:block;margin:7px 0 0;color:#657480;font-size:12px;font-weight:400;line-height:1.45}
+.production-form .optional-label{color:#71828a;font-size:11px;font-weight:500}
+.production-main .production-delivery{margin-top:3px;color:#315f69;font-weight:700}
 .production-form .danger-button{background:#a53d3d!important;color:#fff!important}
 .production-form .danger-button:hover{background:#852f2f!important}
+.production-plates{grid-column:1/-1;padding:11px;border:1px solid #dce6e8;border-radius:10px;background:#f8fafb}
+.production-plates-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px;color:#294b55;font-size:12px}
+.production-plates-title span{display:grid;place-items:center;min-width:24px;height:24px;padding:0 7px;border-radius:999px;background:#e2ebee;color:#42616b;font-size:11px;font-weight:800}
+.production-plates ul{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.production-plates li{display:grid;gap:3px;padding:8px;border-radius:8px;background:#fff}
+.production-plates li.completed{background:#e7f3ed;color:#176149}
+.production-plates label{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;cursor:pointer}
+.production-plates input{width:17px;height:17px;margin:0;accent-color:#176149}
+.production-plates small{color:#60747c;font-size:11px;line-height:1.4}
+.production-no-plates{display:block;padding:5px 0}
+.production-plate-editor{margin:0;padding:14px;border:1px solid #d7e1e5;border-radius:10px;background:#f8fafb}
+.production-plate-editor>legend{padding:0 7px;color:#294b55;font-size:13px;font-weight:800}
+.production-plate-editor article{padding:12px;border:1px solid #dce6e8;border-radius:9px;background:#fff}
+.production-plate-editor article+article{margin-top:10px}
+.production-plate-editor article>header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.production-plate-editor article>div{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:10px}
+.production-plate-editor .production-plate-check{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600}
+.production-plate-editor .production-plate-check input{width:17px;height:17px;margin:0;accent-color:#176149}
+.production-kanban-card .production-plates{padding:8px}
+.production-kanban-card .production-plates small{display:block}
 @media(max-width:650px){
  .production-form-fields{grid-template-columns:1fr}
  .production-form-fields .wide-field{grid-column:1}
  .production-heading-actions>button{justify-content:center;width:100%}
  .production-card:hover{transform:none}
  .production-dialog{width:calc(100vw - 20px)!important;padding:20px!important}
+ .production-plate-editor article>div{grid-template-columns:1fr 1fr}
+ .production-plate-editor article>div label:last-child{grid-column:1/-1}
 }
