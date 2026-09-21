@@ -29,7 +29,7 @@ export default function Demo({administrator,userId}:{administrator:boolean;userI
  {page===0&&<div className="split"><section className="panel accent-panel"><p className="eyebrow">PRODUTOS E CUSTOS</p><h2>Calcule o custo<br/>de cada peça</h2><p>Preencha a ficha do produto, confira o preço sugerido e salve no Portfólio e no Estoque.</p><button disabled={!administrator} onClick={()=>go(1)}>Abrir calculadora <ArrowRight size={17}/></button></section><section className="panel"><p className="eyebrow">CATÁLOGO</p><h2>Portfólio e estoque</h2><p className="muted">Consulte os produtos cadastrados, fotos, preços, categorias e saldos disponíveis.</p><div className="actions"><button onClick={()=>go(6)}>Abrir Portfólio <ArrowRight size={17}/></button>{administrator&&<button className="secondary" onClick={()=>go(4)}>Ver Estoque</button>}</div></section><section className="panel"><p className="eyebrow">VENDAS</p><h2>Pedidos</h2><p className="muted">Crie novos pedidos e acompanhe precificação, aprovação e andamento da produção.</p><div className="actions"><button onClick={()=>go(2)}>Abrir Pedidos <ArrowRight size={17}/></button></div></section></div>}
  {administrator&&<div hidden={page!==1}><ProductSheet userId={userId} catalogVersion={catalogVersion}/></div>}
  <div hidden={page!==2}><Orders administrator={administrator} userId={userId}/></div>
- {administrator&&<div hidden={page!==3}><Production/></div>}
+ {administrator&&<div hidden={page!==3}><Production userId={userId}/></div>}
  {administrator&&page===4&&<Inventory/>}
  {page===5&&<EmptyModule icon={Wallet} title="Nenhum recebimento cadastrado" text="Os recebimentos dos pedidos aparecerão aqui."/>}
  <div hidden={page!==6}><Portfolio administrator={administrator} userId={userId}/></div>
