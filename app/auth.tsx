@@ -4,11 +4,13 @@ import type {Session} from '@supabase/supabase-js';
 import {supabase,type Profile} from '@/lib/supabase';
 import Demo from './demo';
 
+const userEnvironment=import.meta.env.BASE_URL.includes('/desenvolvimento/')?'desenvolvimento':'producao';
+
 function Users(){
  const [users,setUsers]=useState<Profile[]>([]),[message,setMessage]=useState(''),[busy,setBusy]=useState(false);
  async function load(){const {data,error}=await supabase.from('farm_profiles').select('*').order('created_at');if(error){setUsers([]);setMessage('Não foi possível consultar as contas.');}else setUsers(data||[])}
  useEffect(()=>{void load()},[]);
- async function update(user:Profile,role:Profile['role'],active:boolean){setBusy(true);setMessage('');try{const {error}=await supabase.rpc('farm_manage_user',{target:user.id,new_role:role,enabled:active});if(error)setMessage(`Não foi possível atualizar a conta: ${error.message}`);else{setMessage(active?'Vendedor aprovado. Ele poderá entrar depois de confirmar o e-mail.':'Vendedor desativado.');await load()}}catch{setMessage('Sem conexão. Tente novamente.')}finally{setBusy(false)}}
+ async function update(user:Profile,role:Profile['role'],active:boolean){setBusy(true);setMessage('');try{const {error}=await supabase.rpc('farm_manage_user_for_environment',{target:user.id,new_role:role,enabled:active,p_environment:userEnvironment});if(error)setMessage(`Não foi possível atualizar a conta: ${error.message}`);else{setMessage(active&&role==='vendedor'?'Vendedor aprovado e criado no cadastro de vendedores. Ele poderá entrar depois de confirmar o e-mail.':active?'Usuário atualizado.':'Vendedor desativado também no cadastro de vendedores.');await load()}}catch{setMessage('Sem conexão. Tente novamente.')}finally{setBusy(false)}}
  return <section className="panel users-panel"><h2>Usuários</h2><p>A aprovação administrativa pode ser feita antes da confirmação do e-mail. O vendedor só conseguirá entrar depois de concluir as duas etapas.</p><p role="status">{message}</p>{users.map(user=><article className="user-row" key={user.id}><div><strong>{user.name||user.email}</strong><p>{user.email}</p><small>{user.role==='administrador'?'Administrador':'Vendedor'} · {user.active?'Ativo':'Aguardando aprovação / desativado'}</small></div>{user.role==='vendedor'&&<div className="actions"><button disabled={busy} onClick={()=>update(user,'vendedor',!user.active)}>{user.active?'Desativar':'Aprovar vendedor'}</button><button className="secondary" disabled={busy} onClick={()=>{if(window.confirm(`Dar acesso completo de administrador a ${user.email}?`))void update(user,'administrador',true)}}>Tornar administrador</button></div>}</article>)}<button className="secondary" onClick={load}>Atualizar lista</button></section>
 }
 
