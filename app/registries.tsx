@@ -37,7 +37,7 @@ export default function Registries({onCatalogChanged}:{onCatalogChanged:()=>void
   const [suppliesResult,printersResult,sellersResult,usersResult]=await Promise.all([
    supabase.from('farm_supplies').select('id,nome,valor_compra,quantidade_compra,unidade_medida,ativo').order('nome'),
    supabase.from('farm_printers').select('id,nome,potencia_watts,tarifa_energia_kwh,custo_maquina_hora,ativo').order('nome'),
-   supabase.from('farm_sellers').select('id,nome,telefone,email,usuario_id,ativo').eq('ambiente',environment).order('nome'),
+   supabase.from('farm_sellers').select('id,nome,telefone,email,usuario_id,ativo,modelo_comissao,percentual_comissao,forma_pagamento_comissao,observacoes_acordo').eq('ambiente',environment).order('nome'),
    supabase.from('farm_profiles').select('id,name,email').eq('role','vendedor').eq('active',true).order('name'),
   ]);
   if(suppliesResult.error||printersResult.error||sellersResult.error||usersResult.error)setStatus('Não foi possível carregar todos os cadastros. Tente atualizar.');
