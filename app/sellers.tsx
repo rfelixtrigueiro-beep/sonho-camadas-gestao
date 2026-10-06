@@ -17,7 +17,7 @@ type SellerOrder={id:string;numero:number;vendedor_id:string|null;vendedor_cadas
 type DraftItem={productId:string;quantity:string};
 type SaleDraftItem={itemId:string;quantity:string;unitValue:string;discountPercent:string};
 type ReturnDraftItem={itemId:string;quantity:string};
-const environment='desenvolvimento';
+const environment=import.meta.env.BASE_URL.includes('/desenvolvimento/')?'desenvolvimento':'producao';
 const money=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
 const date=(value:string|null)=>value?new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR'):'—';
 const statusLabel:Record<string,string>={rascunho:'Rascunho',enviada:'Aguardando recebimento',recebida:'Recebida',parcialmente_devolvida:'Devolução parcial',encerrada:'Encerrada',cancelada:'Cancelada',informada:'Pendente do fechamento',aprovada:'Aprovada',pago:'Pago'};
