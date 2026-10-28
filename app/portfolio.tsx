@@ -53,8 +53,10 @@ export default function Portfolio({administrator,userId}:{administrator:boolean;
   if(visible.length===0){setMessage('Não há produtos nos filtros atuais para exportar.');return}
   if(generatingPdf)return;
   setReadyPdf(null);setGeneratingPdf(true);setMessage('Gerando o arquivo PDF…');
+  let pdfStage='carregar biblioteca';
   try{
    const {jsPDF}=await import('jspdf');
+   pdfStage='iniciar documento';
    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
    const pageWidth=doc.internal.pageSize.getWidth(),pageHeight=doc.internal.pageSize.getHeight(),margin=12,gap=4,cardHeight=42,cardWidth=(pageWidth-margin*2-gap)/2;
    const stockLabel=stockFilter==='com'?'Com estoque':stockFilter==='sem'?'Sem estoque':stockFilter==='nao_informado'?'Estoque não informado':'Todos';
@@ -62,6 +64,7 @@ export default function Portfolio({administrator,userId}:{administrator:boolean;
    const groupedProducts=new Map<string,PortfolioProduct[]>();
    for(const product of sortedProducts){const categoryName=product.categoria||'Sem categoria';groupedProducts.set(categoryName,[...(groupedProducts.get(categoryName)||[]),product])}
    const logoUrl=new URL(`${import.meta.env.BASE_URL}brand/Logo_Otimizada_Preta.png`,window.location.origin).href;
+   pdfStage='preparar fotos';
    const logo=await loadPdfImage(logoUrl),images=new Map<string,PdfImage|null>();
    // Decode one photo at a time to bound memory use on mobile browsers.
    for(const [index,product] of sortedProducts.entries()){
@@ -72,13 +75,21 @@ export default function Portfolio({administrator,userId}:{administrator:boolean;
    const drawHeader=()=>{if(logo){doc.addImage(logo.data,'JPEG',margin,margin,20,20,undefined,'FAST')}doc.setTextColor(23,52,65);doc.setFont('helvetica','bold');doc.setFontSize(16);doc.text('Portfólio · Sonho em Camadas 3D',margin+25,margin+7);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(86,101,115);doc.text(filters,margin+25,margin+13);doc.text(`${visible.length} produto${visible.length===1?'':'s'} · Gerado em ${new Date().toLocaleString('pt-BR')}`,margin+25,margin+18);doc.setDrawColor(181,138,42);doc.setLineWidth(.6);doc.line(margin,margin+23,pageWidth-margin,margin+23);return margin+30};
    const drawCategory=(name:string,count:number,continuation=false,y=0)=>{doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(23,52,65);doc.text(`${name}${continuation?' · continuação':''}`,margin,y);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(86,101,115);doc.text(`${count} produto${count===1?'':'s'}`,pageWidth-margin,y,{align:'right'});doc.setDrawColor(216,184,99);doc.setLineWidth(.3);doc.line(margin,y+2,pageWidth-margin,y+2);return y+7};
    const drawCard=(product:PortfolioProduct,x:number,y:number)=>{doc.setFillColor(255,255,255);doc.setDrawColor(220,227,233);doc.roundedRect(x,y,cardWidth,cardHeight,2,2,'FD');const image=images.get(product.airtable_record_id),imageX=x+3,imageY=y+4,imageW=26,imageH=34;if(image){const ratio=Math.min(imageW/image.width,imageH/image.height),width=image.width*ratio,height=image.height*ratio;doc.addImage(image.data,'JPEG',imageX+(imageW-width)/2,imageY+(imageH-height)/2,width,height,undefined,'FAST')}else{doc.setFillColor(237,241,244);doc.roundedRect(imageX,imageY,imageW,imageH,1,1,'F');doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(113,131,142);doc.text('Sem foto',imageX+imageW/2,imageY+imageH/2,{align:'center'})}const textX=x+33,textWidth=cardWidth-36;doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(18,100,84);doc.text(product.categoria||'Sem categoria',textX,y+7,{maxWidth:textWidth});doc.setFontSize(9.5);doc.setTextColor(23,42,57);const nameLines=doc.splitTextToSize(product.nome,textWidth) as string[];const shown=nameLines.slice(0,2);if(nameLines.length>2)shown[1]=`${shown[1].replace(/\.*$/,'').slice(0,-1)}…`;doc.text(shown,textX,y+14);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(86,101,115);const size=product.largura_cm!==null&&product.altura_cm!==null?`${product.largura_cm.toLocaleString('pt-BR')} × ${product.altura_cm.toLocaleString('pt-BR')} cm`:'Tamanho não informado';doc.text(size,textX,y+27,{maxWidth:textWidth});doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(18,100,84);doc.text(product.preco_venda!==null?reais.format(product.preco_venda):'Preço não informado',textX,y+35,{maxWidth:textWidth});doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(86,101,115);doc.text(product.estoque===null?'Estoque não informado':`${product.estoque} em estoque`,x+cardWidth-3,y+39,{align:'right',maxWidth:textWidth})};
+   pdfStage='montar páginas';
    let y=drawHeader(),categoryIndex=0;
    for(const [categoryName,categoryProducts] of groupedProducts){if(categoryIndex>0){doc.addPage();y=drawHeader()}y=drawCategory(categoryName,categoryProducts.length,false,y);let column=0;for(const product of categoryProducts){if(column===0&&y+cardHeight>pageHeight-margin-8){doc.addPage();y=drawHeader();y=drawCategory(categoryName,categoryProducts.length,true,y)}const x=margin+column*(cardWidth+gap);drawCard(product,x,y);if(column===1){column=0;y+=cardHeight+gap}else column=1}if(column===1)y+=cardHeight+gap;categoryIndex++}
    const totalPages=doc.getNumberOfPages();for(let page=1;page<=totalPages;page++){doc.setPage(page);doc.setDrawColor(220,227,233);doc.line(margin,pageHeight-9,pageWidth-margin,pageHeight-9);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(113,131,142);doc.text('Sonho em Camadas 3D · Gestão da Farm',margin,pageHeight-5);doc.text(`Página ${page} de ${totalPages}`,pageWidth-margin,pageHeight-5,{align:'right'})}
    const filename=`portfolio-sonho-em-camadas-${new Date().toISOString().slice(0,10)}.pdf`;
-   setReadyPdf({url:URL.createObjectURL(doc.output('blob')),filename});
+   pdfStage='finalizar arquivo';
+   const pdfBlob=doc.output('blob');
+   if(!(pdfBlob instanceof Blob)||pdfBlob.size===0)throw new Error('O gerador retornou um arquivo vazio.');
+   setReadyPdf({url:URL.createObjectURL(pdfBlob),filename});
    setMessage('PDF pronto.');
-  }catch{setMessage('Não foi possível gerar o PDF. Tente novamente.')}finally{setGeneratingPdf(false)}
+  }catch(cause){
+   const detail=cause instanceof Error?cause.message:String(cause);
+   console.error('Portfolio PDF failed',{stage:pdfStage,cause});
+   setMessage(`Não foi possível gerar o PDF (${pdfStage}): ${detail.slice(0,240)}${pdfStage==='carregar biblioteca'?' Atualize a página e tente novamente.':''}`);
+  }finally{setGeneratingPdf(false)}
  }
 
  return <section aria-label="Portfólio de produtos">
