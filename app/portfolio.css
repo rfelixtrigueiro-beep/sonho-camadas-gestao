@@ -170,6 +170,10 @@
 .kit-detail-items>div{display:grid;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;gap:11px;padding:9px;border:1px solid #e0e6e9;border-radius:10px}
 .kit-detail-items img{width:48px;height:48px;object-fit:cover;border-radius:8px}
 .kit-detail-items span{display:grid;gap:3px}
+.portfolio-pdf-actions{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 16px}
+.portfolio-pdf-actions a{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 16px;border:1px solid #126454;border-radius:8px;background:#fff;color:#126454;font-weight:700;text-decoration:none}
+.portfolio-pdf-actions a:first-child{background:#126454;color:#fff}
+.portfolio-pdf-actions a:focus-visible{outline:3px solid #b58a2a;outline-offset:3px}
 .kit-detail-items small{color:#657480}
 .kit-detail-items b{color:#173441;white-space:nowrap}
 .kit-admin-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
