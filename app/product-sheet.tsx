@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {Archive,Clock3,Eraser,FileText,FolderOpen,Save,Search,Trash2} from 'lucide-react';
-import {blank,example,calculate,normalizeSheet,number,printMinutes,formatPrintDuration,estimateProductionDays,type Sheet,type SupplyUse} from '@/lib/pricing';
+import {blank,example,calculate,normalizeSheet,number,printMinutes,formatPrintDuration,formatDurationMinutes,estimateQuoteProduction,type Sheet,type SupplyUse} from '@/lib/pricing';
 import {money} from '@/lib/demo';
 import {supabase} from '@/lib/supabase';
 
@@ -47,16 +47,15 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
  const validQuoteQuantity=Number.isSafeInteger(quoteQuantity)&&quoteQuantity>0;
  const printDuration=sheet.printDuration??formatPrintDuration(sheet.hours);
  const batchQuantity=number(sheet.batch);
- const batchMinutes=printMinutes(printDuration);
- const estimatedDays=estimateProductionDays(quoteQuantity,batchQuantity,batchMinutes);
- const estimatedBatches=estimatedDays===null?0:Math.ceil(quoteQuantity/batchQuantity);
+ const printTimeMinutes=printMinutes(printDuration);
+ const estimate=estimateQuoteProduction(quoteQuantity,batchQuantity,printTimeMinutes);
  const deadlineInputs=[
   !validQuoteQuantity?'Quantidade de peças no orçamento':null,
   !Number.isSafeInteger(batchQuantity)||batchQuantity<1?'Peças produzidas no lote':null,
-  !Number.isSafeInteger(batchMinutes)||batchMinutes<1?'Impressão do lote (HH:MM, maior que 00:00)':null,
+  !Number.isSafeInteger(printTimeMinutes)||printTimeMinutes<1?'Impressão do lote (HH:MM, maior que 00:00)':null,
  ].filter(Boolean);
  const manualDeadline=sheet.quoteDeadlineManual??number(sheet.productionDays)>0;
- const quoteDeadline=manualDeadline?sheet.productionDays:String(estimatedDays??'');
+ const quoteDeadline=manualDeadline?sheet.productionDays:String(estimate?.days??'');
  const quoteUnitCents=result?Math.round((result.price??result.suggested)*100):null;
  const quoteTotalCents=validQuoteQuantity&&quoteUnitCents!==null?quoteQuantity*quoteUnitCents:null;
  const quoteQuantityError=!validQuoteQuantity?'Informe uma quantidade inteira maior que zero.':
@@ -299,8 +298,8 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
     }} aria-invalid={Boolean(errors.productionDays)} aria-describedby={errors.productionDays?'quote-deadline-help quote-deadline-error':'quote-deadline-help'}/>
    </label>
    <div className="muted" id="quote-deadline-help" aria-live="polite">
-    {estimatedDays!==null
-     ?<p>Estimativa automática: {estimatedDays.toLocaleString('pt-BR')} {estimatedDays===1?'dia útil':'dias úteis'} para {estimatedBatches.toLocaleString('pt-BR')} {estimatedBatches===1?'lote':'lotes'}, contando 24 horas de impressão por dia útil.</p>
+    {estimate
+     ?<p>Estimativa automática: {estimate.batches.toLocaleString('pt-BR')} {estimate.batches===1?'lote':'lotes'} × {formatDurationMinutes(printTimeMinutes)} = {formatDurationMinutes(estimate.totalMinutes)} de impressão (HH:MM). Prazo de {estimate.days.toLocaleString('pt-BR')} {estimate.days===1?'dia útil':'dias úteis'}, considerando 24 horas por dia útil.</p>
      :deadlineInputs.length>0
       ?<p>Para calcular o prazo, preencha: {deadlineInputs.join(', ')}.</p>
       :<p>Não foi possível estimar o prazo. Revise a quantidade e o tempo de impressão.</p>}

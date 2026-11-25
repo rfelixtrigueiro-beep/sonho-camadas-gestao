@@ -17,14 +17,18 @@ export function printMinutes(duration:string){
 
 export function formatPrintDuration(hours:string){
  const minutes=Math.round(number(hours)*60);
- if(!Number.isSafeInteger(minutes))return '';
+ return Number.isSafeInteger(minutes)?formatDurationMinutes(minutes):'';
+}
+
+export function formatDurationMinutes(minutes:number){
  return `${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`;
 }
 
-export function estimateProductionDays(quoteQuantity:number,batchQuantity:number,batchMinutes:number){
+export function estimateQuoteProduction(quoteQuantity:number,batchQuantity:number,batchMinutes:number){
  if(![quoteQuantity,batchQuantity,batchMinutes].every(value=>Number.isSafeInteger(value)&&value>0))return null;
- const totalMinutes=Math.ceil(quoteQuantity/batchQuantity)*batchMinutes;
- return Number.isSafeInteger(totalMinutes)?Math.ceil(totalMinutes/(24*60)):null;
+ const batches=Math.ceil(quoteQuantity/batchQuantity);
+ const totalMinutes=batches*batchMinutes;
+ return Number.isSafeInteger(totalMinutes)?{batches,totalMinutes,days:Math.ceil(totalMinutes/(24*60))}:null;
 }
 
 export function calculate(s:Sheet){
