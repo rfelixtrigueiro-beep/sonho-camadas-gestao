@@ -209,7 +209,7 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(23,52,65);doc.text('Informações do orçamento',margin,165);
    doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(86,101,115);
    const productionDays=number(sheet.productionDays);
-   const deadline=productionDays>0?`${productionDays.toLocaleString('pt-BR')} dia${productionDays===1?'':'s'}`:'a combinar';
+   const deadline=productionDays>0?`${productionDays.toLocaleString('pt-BR')} ${productionDays===1?'dia útil':'dias úteis'}`:'a combinar';
    doc.text(`Prazo de produção: ${deadline}.`,margin,174);
    doc.text('Condições de pagamento: a combinar.',margin,180);
    const notes=sheet.quoteNotes?.trim();
@@ -259,7 +259,7 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
    <p className="muted" id="quote-quantity-help">Informe o total de peças solicitado pelo cliente. As peças por lote são usadas para calcular o custo unitário.</p>
    {quoteAttempted&&quoteQuantityError&&<p className="field-error" id="quote-quantity-error">{quoteQuantityError}</p>}
    {!quoteQuantityError&&quoteTotalCents!==null&&quoteUnitCents!==null&&<p aria-live="polite">{quoteQuantity.toLocaleString('pt-BR')} × {money(quoteUnitCents/100)} = <strong>{money(quoteTotalCents/100)}</strong></p>}
-   {field('productionDays','Prazo de produção em dias (opcional)')}
+   {field('productionDays','Prazo de produção em dias úteis (opcional)')}
    <p className="muted">Deixe em branco ou informe 0 para exibir “a combinar” no orçamento.</p>
    <label className="wide-field" htmlFor="quote-notes">Observação (opcional)
     <textarea id="quote-notes" className="quote-notes" rows={3} value={sheet.quoteNotes??''} onChange={event=>{
