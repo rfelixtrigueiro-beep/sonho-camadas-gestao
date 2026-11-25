@@ -1,12 +1,30 @@
 export type SupplyUse={supplyId:string;name:string;quantity:string;unit:string;costPerUnit:string};
-export type Sheet={name:string;batch:string;supplies:SupplyUse[];hours:string;printerId:string;printerName:string;printerWatts:string;printerKwh:string;printerHourly:string;minutes:string;labor:string;loss:string;commission:string;payment:string;tax:string;fixed:string;shipping:string;margin:string;price:string;productionDays:string;quoteQuantity?:string;quoteNotes?:string};
+export type Sheet={name:string;batch:string;supplies:SupplyUse[];hours:string;printerId:string;printerName:string;printerWatts:string;printerKwh:string;printerHourly:string;minutes:string;labor:string;loss:string;commission:string;payment:string;tax:string;fixed:string;shipping:string;margin:string;price:string;productionDays:string;quoteQuantity?:string;quoteNotes?:string;printDuration?:string;quoteDeadlineManual?:boolean};
 
 export const blank:Sheet={name:'',batch:'',supplies:[],hours:'',printerId:'',printerName:'',printerWatts:'',printerKwh:'',printerHourly:'',minutes:'0',labor:'0',loss:'0',commission:'0',payment:'0',tax:'0',fixed:'0',shipping:'0',margin:'0',price:'0',productionDays:'0'};
-export const example:Sheet={name:'Vaso Aurora (exemplo)',batch:'10',supplies:[],hours:'6',printerId:'',printerName:'',printerWatts:'',printerKwh:'',printerHourly:'',minutes:'30',labor:'24',loss:'5',commission:'0',payment:'0',tax:'0',fixed:'0',shipping:'0',margin:'35',price:'20',productionDays:'5'};
+export const example:Sheet={name:'Vaso Aurora (exemplo)',batch:'10',supplies:[],hours:'6',printerId:'',printerName:'',printerWatts:'',printerKwh:'',printerHourly:'',minutes:'30',labor:'24',loss:'5',commission:'0',payment:'0',tax:'0',fixed:'0',shipping:'0',margin:'35',price:'20',productionDays:'0'};
 
 export function number(v:string){
  if(!/^\d+(?:[.,]\d+)?$/.test(v.trim()))return NaN;
  return Number(v.trim().replace(',','.'));
+}
+
+export function printMinutes(duration:string){
+ const parts=/^(\d+):([0-5]\d)$/.exec(duration.trim());
+ const minutes=parts?Number(parts[1])*60+Number(parts[2]):NaN;
+ return Number.isSafeInteger(minutes)?minutes:NaN;
+}
+
+export function formatPrintDuration(hours:string){
+ const minutes=Math.round(number(hours)*60);
+ if(!Number.isSafeInteger(minutes))return '';
+ return `${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`;
+}
+
+export function estimateProductionDays(quoteQuantity:number,batchQuantity:number,batchMinutes:number){
+ if(![quoteQuantity,batchQuantity,batchMinutes].every(value=>Number.isSafeInteger(value)&&value>0))return null;
+ const totalMinutes=Math.ceil(quoteQuantity/batchQuantity)*batchMinutes;
+ return Number.isSafeInteger(totalMinutes)?Math.ceil(totalMinutes/(24*60)):null;
 }
 
 export function calculate(s:Sheet){
@@ -18,6 +36,7 @@ export function calculate(s:Sheet){
   if(!Number.isFinite(n[k])||n[k]<0)errors[k]='Informe um número válido. Use 0 se não houver custo.';
  }
  if(!s.printerId||!s.printerName.trim())errors.printerId='Selecione a impressora utilizada.';
+ if(errors.hours)errors.hours='Informe o tempo em horas e minutos, no formato HH:MM (ex.: 04:54).';
  if(!Number.isInteger(n.batch)||n.batch<1)errors.batch='Informe uma quantidade inteira maior que zero.';
  for(const k of ['loss','commission','payment','tax','margin'])if(n[k]>=100)errors[k]='Informe um percentual de 0 a menos de 100%.';
  const rates=(n.commission+n.payment+n.tax)/100;
@@ -87,7 +106,9 @@ export function normalizeSheet(v:unknown):Sheet|null{
  const productionDays=typeof source.productionDays==='string'?source.productionDays:blank.productionDays;
  const quoteQuantity=typeof source.quoteQuantity==='string'?source.quoteQuantity:'';
  const quoteNotes=typeof source.quoteNotes==='string'?source.quoteNotes:'';
- const normalized=Object.assign({},blank,Object.fromEntries(scalarKeys.map(k=>[k,source[k]])),printer,{supplies,productionDays,quoteQuantity,quoteNotes}) as Sheet;
+ const printDuration=typeof source.printDuration==='string'?source.printDuration:undefined;
+ const quoteDeadlineManual=typeof source.quoteDeadlineManual==='boolean'?source.quoteDeadlineManual:number(productionDays)>0;
+ const normalized=Object.assign({},blank,Object.fromEntries(scalarKeys.map(k=>[k,source[k]])),printer,{supplies,productionDays,quoteQuantity,quoteNotes,printDuration,quoteDeadlineManual}) as Sheet;
  for(const key of ['minutes','labor','loss','commission','payment','tax','fixed','shipping','margin','price','productionDays'] as const)if(!normalized[key].trim())normalized[key]='0';
  return normalized;
 }

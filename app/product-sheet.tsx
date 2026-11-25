@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {Archive,Clock3,Eraser,FileText,FolderOpen,Save,Search,Trash2} from 'lucide-react';
-import {blank,example,calculate,normalizeSheet,number,type Sheet,type SupplyUse} from '@/lib/pricing';
+import {blank,example,calculate,normalizeSheet,number,printMinutes,formatPrintDuration,estimateProductionDays,type Sheet,type SupplyUse} from '@/lib/pricing';
 import {money} from '@/lib/demo';
 import {supabase} from '@/lib/supabase';
 
@@ -45,6 +45,10 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
  const quoteQuantityInput=sheet.quoteQuantity??'';
  const quoteQuantity=/^\d+$/.test(quoteQuantityInput.trim())?Number(quoteQuantityInput):NaN;
  const validQuoteQuantity=Number.isSafeInteger(quoteQuantity)&&quoteQuantity>0;
+ const printDuration=sheet.printDuration??formatPrintDuration(sheet.hours);
+ const estimatedDays=estimateProductionDays(quoteQuantity,number(sheet.batch),printMinutes(printDuration));
+ const manualDeadline=sheet.quoteDeadlineManual??number(sheet.productionDays)>0;
+ const quoteDeadline=manualDeadline?sheet.productionDays:String(estimatedDays??'');
  const quoteUnitCents=result?Math.round((result.price??result.suggested)*100):null;
  const quoteTotalCents=validQuoteQuantity&&quoteUnitCents!==null?quoteQuantity*quoteUnitCents:null;
  const quoteQuantityError=!validQuoteQuantity?'Informe uma quantidade inteira maior que zero.':
@@ -208,7 +212,7 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
    doc.setFillColor(237,245,244);doc.roundedRect(112,126,pageWidth-margin-112,22,2,2,'F');doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(18,100,84);doc.text('VALOR TOTAL',118,134);doc.setFont('helvetica','bold');doc.setFontSize(17);doc.text(money(total),pageWidth-margin-5,143,{align:'right'});
    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(23,52,65);doc.text('Informações do orçamento',margin,165);
    doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(86,101,115);
-   const productionDays=number(sheet.productionDays);
+   const productionDays=number(quoteDeadline);
    const deadline=productionDays>0?`${productionDays.toLocaleString('pt-BR')} ${productionDays===1?'dia útil':'dias úteis'}`:'a combinar';
    doc.text(`Prazo de produção: ${deadline}.`,margin,174);
    doc.text('Condições de pagamento: a combinar.',margin,180);
@@ -239,7 +243,27 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
   }catch{setStatus('Não foi possível gerar o orçamento. Tente novamente.')}finally{setQuoteGenerating(false)}
  }
 
- function field(k:string,label:string){return <label key={k} htmlFor={`field-${k}`}>{label}<input id={`field-${k}`} inputMode={k==='productionDays'?'numeric':'decimal'} value={sheet[k as keyof Sheet] as string} onChange={event=>change(k as keyof Sheet,event.target.value)} aria-invalid={!!errors[k]} aria-describedby={errors[k]?`error-${k}`:undefined}/>{errors[k]&&<span className="field-error" id={`error-${k}`}>{errors[k]}</span>}</label>}
+ function field(k:string,label:string){
+  const isPrintDuration=k==='hours';
+  function update(value:string){
+   if(!isPrintDuration){
+    change(k as keyof Sheet,value);
+    return;
+   }
+   const minutes=printMinutes(value);
+   setSheet(current=>({...current,printDuration:value,hours:Number.isFinite(minutes)?String(minutes/60):''}));
+   setSaved(false);
+   setStatus('Alterações ainda não salvas.');
+  }
+  return <label key={k} htmlFor={`field-${k}`}>{label}
+   <input id={`field-${k}`} inputMode={isPrintDuration?'text':'decimal'}
+    placeholder={isPrintDuration?'Ex.: 04:54':undefined}
+    value={isPrintDuration?printDuration:sheet[k as keyof Sheet] as string}
+    onChange={event=>update(event.target.value)} aria-invalid={!!errors[k]}
+    aria-describedby={errors[k]?`error-${k}`:undefined}/>
+   {errors[k]&&<span className="field-error" id={`error-${k}`}>{errors[k]}</span>}
+  </label>
+ }
 
  return <div className="product-sheet">
   <section className="panel"><div className="section-title"><div><h2>Ficha do seu produto</h2><p className="muted">Preencha os dados para calcular o custo e o preço sugerido.</p></div><span className="badge">{saved?'Produto criado':editingSimulationId?'Editando cálculo':'Rascunho'}</span></div><p className="callout">{editingSimulationId?'Você está alterando um cálculo do histórico. Salve as alterações para atualizar o mesmo registro, sem criar uma cópia.':'Você pode arquivar somente a simulação, gerar um orçamento ou salvar o produto. Ao salvar o produto, o cálculo também será arquivado automaticamente.'}</p><div className="actions"><button disabled={!loaded||!result||saving||saved||simulationSaving||quoteGenerating} onClick={()=>void saveProduct()}><Save size={17}/>{saving?'Salvando…':saved?'Produto salvo':'Salvar produto'}</button><button className="secondary" disabled={!loaded||!result||saving||simulationSaving||quoteGenerating} onClick={()=>void saveSimulation()}><Archive size={17}/>{simulationSaving?'Salvando…':editingSimulationId?'Salvar alterações':'Salvar simulação'}</button>{editingSimulationId&&<button className="secondary" disabled={saving||simulationSaving||quoteGenerating} onClick={cancelSimulationEditing}>Cancelar edição</button>}<button className="secondary" disabled={!loaded||saving||simulationSaving||quoteGenerating} onClick={()=>void generateQuote()}><FileText size={17}/>{quoteGenerating?'Gerando…':'Gerar orçamento'}</button><button className="secondary" disabled={!loaded||saving||simulationSaving||quoteGenerating} onClick={()=>void clearSheet()}><Eraser size={17}/> Limpar</button><button className="secondary" disabled={saving||simulationSaving||quoteGenerating} onClick={loadExample}>Preencher exemplo</button></div><output className="notice">{status}</output><label htmlFor="product-name">Nome do produto<input id="product-name" value={sheet.name} onChange={event=>change('name',event.target.value)} aria-invalid={!!errors.name} aria-describedby={errors.name?'name-error':undefined}/>{errors.name&&<span className="field-error" id="name-error">{errors.name}</span>}</label></section>
@@ -259,8 +283,19 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
    <p className="muted" id="quote-quantity-help">Informe o total de peças solicitado pelo cliente. As peças por lote são usadas para calcular o custo unitário.</p>
    {quoteAttempted&&quoteQuantityError&&<p className="field-error" id="quote-quantity-error">{quoteQuantityError}</p>}
    {!quoteQuantityError&&quoteTotalCents!==null&&quoteUnitCents!==null&&<p aria-live="polite">{quoteQuantity.toLocaleString('pt-BR')} × {money(quoteUnitCents/100)} = <strong>{money(quoteTotalCents/100)}</strong></p>}
-   {field('productionDays','Prazo de produção em dias úteis (opcional)')}
-   <p className="muted">Deixe em branco ou informe 0 para exibir “a combinar” no orçamento.</p>
+   <label htmlFor="quote-deadline">Prazo de produção em dias úteis (opcional)
+    <input id="quote-deadline" inputMode="numeric" value={quoteDeadline} onChange={event=>{
+     const value=event.target.value;
+     setSheet(current=>({...current,productionDays:value,quoteDeadlineManual:true}));
+     setStatus('Prazo do orçamento atualizado.');
+    }} aria-invalid={Boolean(errors.productionDays)} aria-describedby={errors.productionDays?'quote-deadline-help quote-deadline-error':'quote-deadline-help'}/>
+   </label>
+   <p className="muted" id="quote-deadline-help">A estimativa considera 24 horas de impressão por dia útil. Você pode ajustar o prazo ou informar 0 para exibir “a combinar”.</p>
+   {errors.productionDays&&<p className="field-error" id="quote-deadline-error">{errors.productionDays}</p>}
+   {manualDeadline&&<button type="button" className="secondary" onClick={()=>{
+    setSheet(current=>({...current,productionDays:'0',quoteDeadlineManual:false}));
+    setStatus('Prazo automático do orçamento restaurado.');
+   }}>Usar prazo automático</button>}
    <label className="wide-field" htmlFor="quote-notes">Observação (opcional)
     <textarea id="quote-notes" className="quote-notes" rows={3} value={sheet.quoteNotes??''} onChange={event=>{
      const value=event.target.value;
@@ -275,7 +310,7 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
    <div className="calculator-fields">
     <section className="panel calculator-supplies"><h2>Insumos do lote</h2><p className="muted">Adicione quantos insumos forem necessários e informe o consumo total do lote.</p><label className="supply-picker">Adicionar insumo<select value="" onChange={event=>{addSupply(event.target.value);event.target.value=''}}><option value="">Selecione um insumo</option>{catalog.filter(supply=>supply.ativo&&!sheet.supplies.some(item=>item.supplyId===supply.id)).map(supply=><option key={supply.id} value={supply.id}>{supply.nome} · {money(costPerUnit(supply))}/{supply.unidade_medida}</option>)}</select></label>{sheet.supplies.length===0?<p className="callout">Nenhum insumo adicionado. Use a lista acima para incluir PLA, argolas, embalagens e outros itens.</p>:sheet.supplies.map((item,index)=><fieldset className="supply-use-card" key={item.supplyId}><legend>{item.name}</legend><p>{money(number(item.costPerUnit))} por {item.unit}</p><label>Quantidade usada no lote ({item.unit})<input inputMode="decimal" value={item.quantity} onChange={event=>changeSupplies(sheet.supplies.map((old,itemIndex)=>itemIndex===index?{...old,quantity:event.target.value}:old))} aria-invalid={!!errors[`s${index}quantity`]}/>{errors[`s${index}quantity`]&&<span className="field-error">{errors[`s${index}quantity`]}</span>}</label><button className="secondary" onClick={()=>changeSupplies(sheet.supplies.filter((_,itemIndex)=>itemIndex!==index))}>Remover insumo</button></fieldset>)}</section>
 
-    <section className="panel"><h2>Lote e impressão</h2><p className="muted">Selecione a impressora. A potência e os custos cadastrados serão usados automaticamente.</p><label className="printer-picker" htmlFor="printer-select">Impressora utilizada<select id="printer-select" value={sheet.printerId} onChange={event=>selectPrinter(event.target.value)} aria-invalid={!!errors.printerId}><option value="">Selecione a impressora</option>{sheet.printerId&&!printers.some(item=>item.id===sheet.printerId&&item.ativo)&&<option value={sheet.printerId}>{sheet.printerName} · configuração da ficha</option>}{printers.filter(printer=>printer.ativo).map(printer=><option key={printer.id} value={printer.id}>{printer.nome}</option>)}</select>{errors.printerId&&<span className="field-error">{errors.printerId}</span>}</label>{sheet.printerId&&<div className="printer-values"><span><small>Potência</small><strong>{number(sheet.printerWatts).toLocaleString('pt-BR')} W</strong></span><span><small>Energia</small><strong>{money(number(sheet.printerKwh))}/kWh</strong></span><span><small>Máquina</small><strong>{money(number(sheet.printerHourly))}/hora</strong></span></div>}<div className="fields">{field('batch','Peças produzidas no lote')}{field('hours','Impressão do lote (horas)')}</div></section>
+    <section className="panel"><h2>Lote e impressão</h2><p className="muted">Selecione a impressora. A potência e os custos cadastrados serão usados automaticamente.</p><label className="printer-picker" htmlFor="printer-select">Impressora utilizada<select id="printer-select" value={sheet.printerId} onChange={event=>selectPrinter(event.target.value)} aria-invalid={!!errors.printerId}><option value="">Selecione a impressora</option>{sheet.printerId&&!printers.some(item=>item.id===sheet.printerId&&item.ativo)&&<option value={sheet.printerId}>{sheet.printerName} · configuração da ficha</option>}{printers.filter(printer=>printer.ativo).map(printer=><option key={printer.id} value={printer.id}>{printer.nome}</option>)}</select>{errors.printerId&&<span className="field-error">{errors.printerId}</span>}</label>{sheet.printerId&&<div className="printer-values"><span><small>Potência</small><strong>{number(sheet.printerWatts).toLocaleString('pt-BR')} W</strong></span><span><small>Energia</small><strong>{money(number(sheet.printerKwh))}/kWh</strong></span><span><small>Máquina</small><strong>{money(number(sheet.printerHourly))}/hora</strong></span></div>}<div className="fields">{field('batch','Peças produzidas no lote')}{field('hours','Impressão do lote (HH:MM)')}</div></section>
 
     {groups.map(group=><section className="panel" key={group.title}><h2>{group.title}</h2><p className="muted">{group.hint}</p><div className="fields">{group.fields.map(([fieldName,label])=>field(fieldName,label))}</div>{group.title==='Trabalho'&&<p className="footnote">A reserva de perdas é aplicada ao custo de todos os insumos adicionados. Preço sugerido = (custo unitário + tarifa fixa + frete) ÷ (1 − taxas percentuais − margem desejada).</p>}</section>)}
    </div>
