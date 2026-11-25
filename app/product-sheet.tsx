@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {Archive,Clock3,Eraser,FileText,FolderOpen,Save,Search,Trash2} from 'lucide-react';
 import {blank,example,calculate,normalizeSheet,number,printMinutes,formatPrintDuration,formatDurationMinutes,estimateQuoteProduction,defaultQuoteHoursPerWorkday,validQuoteHoursPerWorkday,type Sheet,type SupplyUse} from '@/lib/pricing';
 import {money} from '@/lib/demo';
@@ -38,6 +38,9 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
  const [simulationsLoading,setSimulationsLoading]=useState(true);
  const [simulationSaving,setSimulationSaving]=useState(false);
  const [quoteGenerating,setQuoteGenerating]=useState(false);
+ const [quotePhoto,setQuotePhoto]=useState<PdfImage|null>(null);
+ const [quotePhotoState,setQuotePhotoState]=useState({loading:false,error:''});
+ const quotePhotoRequest=useRef(0);
  const [editingSimulationId,setEditingSimulationId]=useState('');
  const [deletingSimulationId,setDeletingSimulationId]=useState('');
  const {errors,result}=calculate(sheet);
@@ -108,7 +111,34 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
   setSaved(false);setStatus(printer?'Impressora selecionada. Potência e custos foram aplicados.':'Selecione a impressora utilizada.');
  }
 
+ function clearQuotePhoto(){
+  quotePhotoRequest.current++;
+  setQuotePhoto(null);
+  setQuotePhotoState({loading:false,error:''});
+ }
+
+ async function selectQuotePhoto(file:File){
+  const request=++quotePhotoRequest.current;
+  if((file.type&&!['image/jpeg','image/png','image/webp'].includes(file.type))||file.size>10*1024*1024){
+   setQuotePhotoState({loading:false,error:'Selecione uma imagem JPG, PNG ou WebP de até 10 MB.'});
+   return;
+  }
+  setQuotePhotoState({loading:true,error:''});
+  const url=URL.createObjectURL(file);
+  try{
+   const photo=await loadPdfImage(url);
+   if(request!==quotePhotoRequest.current)return;
+   if(photo){
+    setQuotePhoto(photo);
+    setQuotePhotoState({loading:false,error:''});
+   }else{
+    setQuotePhotoState({loading:false,error:'Não foi possível abrir a foto. Escolha outra imagem.'});
+   }
+  }finally{URL.revokeObjectURL(url)}
+ }
+
  function loadExample(){
+  clearQuotePhoto();
   const sample=structuredClone(example);
   const printer=printers[0];
   if(printer)Object.assign(sample,{printerId:printer.id,printerName:printer.nome,printerWatts:String(printer.potencia_watts),printerKwh:String(printer.tarifa_energia_kwh),printerHourly:String(printer.custo_maquina_hora)});
@@ -143,6 +173,7 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
  function openSimulation(simulation:CalculationSimulation){
   const restored=normalizeSheet(simulation.sheet);
   if(!restored){setStatus('Esta simulação não possui uma ficha válida.');return}
+  clearQuotePhoto();
   setSheet(restored);setSaved(false);setEditingSimulationId(simulation.id);sessionStorage.setItem(draftKey,JSON.stringify(restored));sessionStorage.setItem(editingKey,simulation.id);setStatus(`Cálculo “${simulation.nome}” aberto para edição. Altere os dados e clique em Salvar alterações.`);window.scrollTo({top:0,behavior:'smooth'});
  }
 
@@ -172,13 +203,24 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
  }
 
  async function clearSheet(){
-  if(saving)return;setSaving(true);const cleared=structuredClone(blank);setSheet(cleared);setSaved(false);setEditingSimulationId('');localStorage.removeItem(key);sessionStorage.setItem(draftKey,JSON.stringify(cleared));sessionStorage.removeItem(editingKey);
+  if(saving)return;
+  clearQuotePhoto();
+  setSaving(true);const cleared=structuredClone(blank);setSheet(cleared);setSaved(false);setEditingSimulationId('');localStorage.removeItem(key);sessionStorage.setItem(draftKey,JSON.stringify(cleared));sessionStorage.removeItem(editingKey);
   const {error}=await supabase.from('farm_product_sheets').upsert({id:userId,sheet:cleared,updated_at:new Date().toISOString()},{onConflict:'id'});
   setStatus(error?'A tela foi limpa, mas a ficha anterior pode reaparecer ao entrar novamente. Nenhum produto foi criado.':'Calculadora limpa. Nenhum produto foi criado no Portfólio.');setSaving(false);
  }
 
  async function generateQuote(){
   if(quoteGenerating)return;
+  if(quotePhotoState.loading){
+   setStatus('Aguarde a foto terminar de carregar para gerar o orçamento.');
+   return;
+  }
+  if(quotePhotoState.error){
+   setStatus('Revise a foto do orçamento ou remova o anexo.');
+   document.getElementById('quote-photo')?.focus();
+   return;
+  }
   if(quoteQuantityError){
    setQuoteAttempted(true);
    setStatus(`Quantidade de peças no orçamento: ${quoteQuantityError}`);
@@ -227,34 +269,34 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
    doc.setFillColor(255,255,255);doc.setDrawColor(220,227,233);doc.rect(margin,tableY+10,contentWidth,17,'FD');doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(23,52,65);doc.text(sheet.name.trim(),margin+4,tableY+20,{maxWidth:82});doc.text(quantity.toLocaleString('pt-BR'),colQuantity,tableY+20,{align:'right'});doc.text(money(unitPrice),colUnit,tableY+20,{align:'right'});doc.setFont('helvetica','bold');doc.text(money(total),colTotal-4,tableY+20,{align:'right'});
 
    doc.setFillColor(237,245,244);doc.roundedRect(112,126,pageWidth-margin-112,22,2,2,'F');doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(18,100,84);doc.text('VALOR TOTAL',118,134);doc.setFont('helvetica','bold');doc.setFontSize(17);doc.text(money(total),pageWidth-margin-5,143,{align:'right'});
-   doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(23,52,65);doc.text('Informações do orçamento',margin,165);
+   let detailsY=165;
+   if(quotePhoto){
+    const photoY=126;
+    const scale=Math.min(70/quotePhoto.width,36/quotePhoto.height);
+    const width=quotePhoto.width*scale,height=quotePhoto.height*scale;
+    doc.addImage(quotePhoto.data,'JPEG',margin,photoY,width,height,undefined,'FAST');
+    detailsY=Math.max(detailsY,photoY+height+9);
+   }
+   doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(23,52,65);doc.text('Informações do orçamento',margin,detailsY);
    doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(86,101,115);
    const productionDays=number(quoteDeadline);
    const deadline=productionDays>0?`${productionDays.toLocaleString('pt-BR')} ${productionDays===1?'dia útil':'dias úteis'}`:'a combinar';
-   doc.text(`Prazo de produção: ${deadline}.`,margin,174);
-   doc.text('Condições de pagamento: a combinar.',margin,180);
+   doc.text(`Prazo de produção: ${deadline}.`,margin,detailsY+9);
+   doc.text('Condições de pagamento: a combinar.',margin,detailsY+15);
    const notes=sheet.quoteNotes?.trim();
    if(notes){
     const lines:string[]=doc.splitTextToSize(`Observação: ${notes}`,contentWidth);
-    let y=188;
-    for(const line of lines){
-     if(y>266){
-      doc.addPage();
-      doc.setFont('helvetica','bold');doc.text('Informações do orçamento (continuação)',margin,18);
-      doc.setFont('helvetica','normal');
-      y=26;
-     }
-     if(line)doc.text(line,margin,y);
-     y+=5;
+    const startY=detailsY+23,lineHeight=5,lastLineY=266;
+    if(startY+(lines.length-1)*lineHeight>lastLineY){
+     setStatus('A observação não cabe em uma página. Encurte o texto e gere o orçamento novamente.');
+     return;
     }
+    lines.forEach((line,index)=>{if(line)doc.text(line,margin,startY+index*lineHeight)});
    }
-   for(let page=1;page<=doc.getNumberOfPages();page++){
-    doc.setPage(page);
-    doc.setDrawColor(220,227,233);doc.line(margin,274,pageWidth-margin,274);
-    doc.setFontSize(7.5);doc.setTextColor(113,131,142);
-    doc.text('Orçamento gerado pelo sistema de gestão Sonho em Camadas 3D.',margin,280);
-    doc.text('Valores calculados a partir da ficha atual.',pageWidth-margin,280,{align:'right'});
-   }
+   doc.setDrawColor(220,227,233);doc.line(margin,274,pageWidth-margin,274);
+   doc.setFontSize(7.5);doc.setTextColor(113,131,142);
+   doc.text('Orçamento gerado pelo sistema de gestão Sonho em Camadas 3D.',margin,280);
+   doc.text('Valores calculados a partir da ficha atual.',pageWidth-margin,280,{align:'right'});
    const filename=sheet.name.trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase()||'produto';
    doc.save(`orcamento-${filename}-${today.toISOString().slice(0,10)}.pdf`);setStatus('Orçamento gerado e baixado. A ficha e o estoque não foram alterados.');
   }catch{setStatus('Não foi possível gerar o orçamento. Tente novamente.')}finally{setQuoteGenerating(false)}
@@ -335,6 +377,23 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
      setStatus('Observação do orçamento atualizada.');
     }}/>
    </label>
+   <label htmlFor="quote-photo">Foto do produto para o orçamento (opcional)
+    <input id="quote-photo" type="file" accept="image/jpeg,image/png,image/webp" disabled={quoteGenerating}
+     aria-describedby="quote-photo-help quote-photo-status" aria-invalid={Boolean(quotePhotoState.error)}
+     onChange={event=>{
+      const file=event.target.files?.[0];
+      event.target.value='';
+      if(file)void selectQuotePhoto(file);
+     }}/>
+   </label>
+   <p className="muted" id="quote-photo-help">JPG, PNG ou WebP, até 10 MB. A foto é usada neste PDF. Anexe novamente se reabrir a ficha.</p>
+   <div id="quote-photo-status" aria-live="polite">
+    {quotePhotoState.loading&&<p>Preparando a foto…</p>}
+    {quotePhotoState.error&&<p className="field-error">{quotePhotoState.error}</p>}
+   </div>
+   {/* oxlint-disable-next-line next/no-img-element -- shows a local image already resized for PDF export */}
+   {quotePhoto&&<img className="quote-photo-preview" src={quotePhoto.data} alt="Prévia da foto do orçamento"/>}
+   {(quotePhoto||quotePhotoState.error||quotePhotoState.loading)&&<button type="button" className="secondary" disabled={quoteGenerating} onClick={clearQuotePhoto}>Remover foto</button>}
   </section>
 
   <div className="calculator-layout"><section className="panel calculator-result" aria-live="polite"><p className="eyebrow">RESULTADO DA FICHA</p><h2>{sheet.name||'Seu produto'}</h2>{!result?<><p className="callout">Cálculo incompleto. Revise os campos indicados abaixo. Campo vazio não significa custo zero.</p><p>{Object.keys(errors).length} {Object.keys(errors).length===1?'campo precisa':'campos precisam'} de revisão.</p></>:<><div className="result-pair"><div><small>Custo por unidade</small><strong>{money(result.unit)}</strong></div><div><small>Preço mínimo para a margem desejada</small><strong>{money(result.suggested)}</strong></div></div><dl>{result.parts.map(([name,value])=><div key={name}><dt>{name}</dt><dd>{money(value)}</dd></div>)}<div><dt>Custo do lote</dt><dd>{money(result.batch)}</dd></div><div><dt>Tarifa fixa + frete por unidade</dt><dd>{money(result.expenses)}</dd></div>{result.price!==null&&<><div><dt>Preço informado</dt><dd>{money(result.price)}</dd></div><div><dt>Taxas no preço informado</dt><dd>{money(result.price*result.rates)}</dd></div><div><dt>Contribuição por unidade</dt><dd>{money(result.contribution!)}</dd></div><div><dt>Margem no preço informado</dt><dd>{result.actualMargin!.toLocaleString('pt-BR',{maximumFractionDigits:2})}%</dd></div></>}</dl>{result.contribution!==null&&result.contribution<0&&<p className="field-error">O preço informado não cobre os custos e as despesas desta ficha.</p>}<p className="footnote">Margem é a parcela da venda que sobra após os custos e taxas informados. A sugestão é arredondada para cima no centavo.</p></>}</section>
