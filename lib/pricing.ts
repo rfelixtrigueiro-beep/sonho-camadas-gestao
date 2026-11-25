@@ -1,5 +1,5 @@
 export type SupplyUse={supplyId:string;name:string;quantity:string;unit:string;costPerUnit:string};
-export type Sheet={name:string;batch:string;supplies:SupplyUse[];hours:string;printerId:string;printerName:string;printerWatts:string;printerKwh:string;printerHourly:string;minutes:string;labor:string;loss:string;commission:string;payment:string;tax:string;fixed:string;shipping:string;margin:string;price:string;productionDays:string;quoteQuantity?:string;quoteNotes?:string;printDuration?:string;quoteDeadlineManual?:boolean};
+export type Sheet={name:string;batch:string;supplies:SupplyUse[];hours:string;printerId:string;printerName:string;printerWatts:string;printerKwh:string;printerHourly:string;minutes:string;labor:string;loss:string;commission:string;payment:string;tax:string;fixed:string;shipping:string;margin:string;price:string;productionDays:string;quoteQuantity?:string;quoteNotes?:string;printDuration?:string;quoteDeadlineManual?:boolean;quoteHoursPerWorkday?:string};
 
 export const blank:Sheet={name:'',batch:'',supplies:[],hours:'',printerId:'',printerName:'',printerWatts:'',printerKwh:'',printerHourly:'',minutes:'0',labor:'0',loss:'0',commission:'0',payment:'0',tax:'0',fixed:'0',shipping:'0',margin:'0',price:'0',productionDays:'0'};
 export const example:Sheet={name:'Vaso Aurora (exemplo)',batch:'10',supplies:[],hours:'6',printerId:'',printerName:'',printerWatts:'',printerKwh:'',printerHourly:'',minutes:'30',labor:'24',loss:'5',commission:'0',payment:'0',tax:'0',fixed:'0',shipping:'0',margin:'35',price:'20',productionDays:'0'};
@@ -24,13 +24,19 @@ export function formatDurationMinutes(minutes:number){
  return `${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`;
 }
 
-export const quotePrintHoursPerWorkday=8;
+export const defaultQuoteHoursPerWorkday=8;
 
-export function estimateQuoteProduction(quoteQuantity:number,batchQuantity:number,batchMinutes:number){
+export function validQuoteHoursPerWorkday(hours:number){
+ return Number.isFinite(hours)&&hours>0&&hours<=24;
+}
+
+export function estimateQuoteProduction(quoteQuantity:number,batchQuantity:number,batchMinutes:number,hoursPerWorkday:number){
  if(![quoteQuantity,batchQuantity,batchMinutes].every(value=>Number.isSafeInteger(value)&&value>0))return null;
+ if(!validQuoteHoursPerWorkday(hoursPerWorkday))return null;
  const batches=Math.ceil(quoteQuantity/batchQuantity);
  const totalMinutes=batches*batchMinutes;
- return Number.isSafeInteger(totalMinutes)?{batches,totalMinutes,days:Math.ceil(totalMinutes/(quotePrintHoursPerWorkday*60))}:null;
+ const days=Math.ceil(totalMinutes/(hoursPerWorkday*60));
+ return Number.isSafeInteger(totalMinutes)&&Number.isSafeInteger(days)?{batches,totalMinutes,days}:null;
 }
 
 export function calculate(s:Sheet){
@@ -114,7 +120,8 @@ export function normalizeSheet(v:unknown):Sheet|null{
  const quoteNotes=typeof source.quoteNotes==='string'?source.quoteNotes:'';
  const printDuration=typeof source.printDuration==='string'?source.printDuration:undefined;
  const quoteDeadlineManual=typeof source.quoteDeadlineManual==='boolean'?source.quoteDeadlineManual:number(productionDays)>0;
- const normalized=Object.assign({},blank,Object.fromEntries(scalarKeys.map(k=>[k,source[k]])),printer,{supplies,productionDays,quoteQuantity,quoteNotes,printDuration,quoteDeadlineManual}) as Sheet;
+ const quoteHoursPerWorkday=typeof source.quoteHoursPerWorkday==='string'?source.quoteHoursPerWorkday:undefined;
+ const normalized=Object.assign({},blank,Object.fromEntries(scalarKeys.map(k=>[k,source[k]])),printer,{supplies,productionDays,quoteQuantity,quoteNotes,printDuration,quoteDeadlineManual,quoteHoursPerWorkday}) as Sheet;
  for(const key of ['minutes','labor','loss','commission','payment','tax','fixed','shipping','margin','price','productionDays'] as const)if(!normalized[key].trim())normalized[key]='0';
  return normalized;
 }

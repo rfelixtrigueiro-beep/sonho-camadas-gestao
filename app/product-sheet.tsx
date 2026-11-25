@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {Archive,Clock3,Eraser,FileText,FolderOpen,Save,Search,Trash2} from 'lucide-react';
-import {blank,example,calculate,normalizeSheet,number,printMinutes,formatPrintDuration,formatDurationMinutes,estimateQuoteProduction,quotePrintHoursPerWorkday,type Sheet,type SupplyUse} from '@/lib/pricing';
+import {blank,example,calculate,normalizeSheet,number,printMinutes,formatPrintDuration,formatDurationMinutes,estimateQuoteProduction,defaultQuoteHoursPerWorkday,validQuoteHoursPerWorkday,type Sheet,type SupplyUse} from '@/lib/pricing';
 import {money} from '@/lib/demo';
 import {supabase} from '@/lib/supabase';
 
@@ -48,11 +48,15 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
  const printDuration=sheet.printDuration??formatPrintDuration(sheet.hours);
  const batchQuantity=number(sheet.batch);
  const printTimeMinutes=printMinutes(printDuration);
- const estimate=estimateQuoteProduction(quoteQuantity,batchQuantity,printTimeMinutes);
+ const hoursPerWorkdayInput=sheet.quoteHoursPerWorkday??String(defaultQuoteHoursPerWorkday);
+ const hoursPerWorkday=number(hoursPerWorkdayInput);
+ const hasValidWorkday=validQuoteHoursPerWorkday(hoursPerWorkday);
+ const estimate=estimateQuoteProduction(quoteQuantity,batchQuantity,printTimeMinutes,hoursPerWorkday);
  const deadlineInputs=[
   !validQuoteQuantity?'Quantidade de peças no orçamento':null,
   !Number.isSafeInteger(batchQuantity)||batchQuantity<1?'Peças produzidas no lote':null,
   !Number.isSafeInteger(printTimeMinutes)||printTimeMinutes<1?'Impressão do lote (HH:MM, maior que 00:00)':null,
+  !hasValidWorkday?'Horas de impressão por dia útil':null,
  ].filter(Boolean);
  const manualDeadline=sheet.quoteDeadlineManual??number(sheet.productionDays)>0;
  const quoteDeadline=manualDeadline?sheet.productionDays:String(estimate?.days??'');
@@ -181,6 +185,12 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
    document.getElementById('quote-quantity')?.focus();
    return;
   }
+  if(!hasValidWorkday){
+   setQuoteAttempted(true);
+   setStatus('Informe mais de 0 e até 24 horas de impressão por dia útil.');
+   document.getElementById('quote-hours-per-workday')?.focus();
+   return;
+  }
   if(!result){
    const pending=Object.keys(errors).length;
    setStatus(`Para gerar o orçamento, revise ${pending} ${pending===1?'campo indicado':'campos indicados'} na calculadora.`);
@@ -289,6 +299,14 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
    </label>
    <p className="muted" id="quote-quantity-help">Informe o total de peças solicitado pelo cliente. As peças por lote são usadas para calcular o custo unitário.</p>
    {quoteAttempted&&quoteQuantityError&&<p className="field-error" id="quote-quantity-error">{quoteQuantityError}</p>}
+   <label htmlFor="quote-hours-per-workday">Horas de impressão por dia útil
+    <input id="quote-hours-per-workday" inputMode="decimal" value={hoursPerWorkdayInput} onChange={event=>{
+     const value=event.target.value;
+     setSheet(current=>({...current,quoteHoursPerWorkday:value}));
+     setStatus('Horas disponíveis por dia útil atualizadas.');
+    }} aria-invalid={!hasValidWorkday} aria-describedby="quote-hours-per-workday-help"/>
+   </label>
+   <p className={hasValidWorkday?'muted':'field-error'} id="quote-hours-per-workday-help">Informe mais de 0 e até 24 horas. Esse valor é usado para estimar o prazo.</p>
    {!quoteQuantityError&&quoteTotalCents!==null&&quoteUnitCents!==null&&<p aria-live="polite">{quoteQuantity.toLocaleString('pt-BR')} × {money(quoteUnitCents/100)} = <strong>{money(quoteTotalCents/100)}</strong></p>}
    <label htmlFor="quote-deadline">Prazo de produção em dias úteis (opcional)
     <input id="quote-deadline" inputMode="numeric" value={quoteDeadline} onChange={event=>{
@@ -299,7 +317,7 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
    </label>
    <div className="muted" id="quote-deadline-help" aria-live="polite">
     {estimate
-     ?<p>Estimativa automática: {estimate.batches.toLocaleString('pt-BR')} {estimate.batches===1?'lote':'lotes'} × {formatDurationMinutes(printTimeMinutes)} = {formatDurationMinutes(estimate.totalMinutes)} de impressão (HH:MM). Prazo de {estimate.days.toLocaleString('pt-BR')} {estimate.days===1?'dia útil':'dias úteis'}, considerando {quotePrintHoursPerWorkday} horas por dia útil.</p>
+     ?<p>Estimativa automática: {estimate.batches.toLocaleString('pt-BR')} {estimate.batches===1?'lote':'lotes'} × {formatDurationMinutes(printTimeMinutes)} = {formatDurationMinutes(estimate.totalMinutes)} de impressão (HH:MM). Prazo de {estimate.days.toLocaleString('pt-BR')} {estimate.days===1?'dia útil':'dias úteis'}, considerando {hoursPerWorkday.toLocaleString('pt-BR')} {hoursPerWorkday===1?'hora':'horas'} por dia útil.</p>
      :deadlineInputs.length>0
       ?<p>Para calcular o prazo, preencha: {deadlineInputs.join(', ')}.</p>
       :<p>Não foi possível estimar o prazo. Revise a quantidade e o tempo de impressão.</p>}
