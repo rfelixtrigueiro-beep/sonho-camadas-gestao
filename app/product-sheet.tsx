@@ -41,6 +41,14 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
  const [editingSimulationId,setEditingSimulationId]=useState('');
  const [deletingSimulationId,setDeletingSimulationId]=useState('');
  const {errors,result}=calculate(sheet);
+ const [quoteAttempted,setQuoteAttempted]=useState(false);
+ const quoteQuantityInput=sheet.quoteQuantity??'';
+ const quoteQuantity=/^\d+$/.test(quoteQuantityInput.trim())?Number(quoteQuantityInput):NaN;
+ const validQuoteQuantity=Number.isSafeInteger(quoteQuantity)&&quoteQuantity>0;
+ const quoteUnitCents=result?Math.round((result.price??result.suggested)*100):null;
+ const quoteTotalCents=validQuoteQuantity&&quoteUnitCents!==null?quoteQuantity*quoteUnitCents:null;
+ const quoteQuantityError=!validQuoteQuantity?'Informe uma quantidade inteira maior que zero.':
+  quoteTotalCents!==null&&!Number.isSafeInteger(quoteTotalCents)?'O valor do orçamento é muito alto. Revise a quantidade ou o preço.':'';
 
  useEffect(()=>{let live=true;void (async()=>{
   setStatus('Carregando ficha, insumos e impressoras…');
@@ -156,6 +164,12 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
 
  async function generateQuote(){
   if(quoteGenerating)return;
+  if(quoteQuantityError){
+   setQuoteAttempted(true);
+   setStatus(`Quantidade de peças no orçamento: ${quoteQuantityError}`);
+   document.getElementById('quote-quantity')?.focus();
+   return;
+  }
   if(!result){
    const pending=Object.keys(errors).length;
    setStatus(`Para gerar o orçamento, revise ${pending} ${pending===1?'campo indicado':'campos indicados'} na calculadora.`);
@@ -166,13 +180,14 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
    },0);
    return;
   }
+  if(quoteUnitCents===null||quoteTotalCents===null)return;
   setQuoteGenerating(true);setStatus('Gerando orçamento em PDF…');
   try{
    const {jsPDF}=await import('jspdf');
    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
    const pageWidth=doc.internal.pageSize.getWidth(),margin=16,contentWidth=pageWidth-margin*2;
    const today=new Date(),validUntil=new Date(today);validUntil.setDate(validUntil.getDate()+7);
-   const quantity=number(sheet.batch),unitPrice=result.price??result.suggested,total=unitPrice*quantity;
+   const quantity=quoteQuantity,unitPrice=quoteUnitCents/100,total=quoteTotalCents/100;
    const logoUrl=new URL(`${import.meta.env.BASE_URL}brand/Logo_Otimizada_Preta.png`,window.location.origin).href;
    const logo=await loadPdfImage(logoUrl);
    if(logo){const logoSize=25,ratio=Math.min(logoSize/logo.width,logoSize/logo.height),width=logo.width*ratio,height=logo.height*ratio;doc.addImage(logo.data,'JPEG',margin+(logoSize-width)/2,13+(logoSize-height)/2,width,height,undefined,'FAST')}
@@ -203,6 +218,23 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
 
  return <div className="product-sheet">
   <section className="panel"><div className="section-title"><div><h2>Ficha do seu produto</h2><p className="muted">Preencha os dados para calcular o custo e o preço sugerido.</p></div><span className="badge">{saved?'Produto criado':editingSimulationId?'Editando cálculo':'Rascunho'}</span></div><p className="callout">{editingSimulationId?'Você está alterando um cálculo do histórico. Salve as alterações para atualizar o mesmo registro, sem criar uma cópia.':'Você pode arquivar somente a simulação, gerar um orçamento ou salvar o produto. Ao salvar o produto, o cálculo também será arquivado automaticamente.'}</p><div className="actions"><button disabled={!loaded||!result||saving||saved||simulationSaving||quoteGenerating} onClick={()=>void saveProduct()}><Save size={17}/>{saving?'Salvando…':saved?'Produto salvo':'Salvar produto'}</button><button className="secondary" disabled={!loaded||!result||saving||simulationSaving||quoteGenerating} onClick={()=>void saveSimulation()}><Archive size={17}/>{simulationSaving?'Salvando…':editingSimulationId?'Salvar alterações':'Salvar simulação'}</button>{editingSimulationId&&<button className="secondary" disabled={saving||simulationSaving||quoteGenerating} onClick={cancelSimulationEditing}>Cancelar edição</button>}<button className="secondary" disabled={!loaded||saving||simulationSaving||quoteGenerating} onClick={()=>void generateQuote()}><FileText size={17}/>{quoteGenerating?'Gerando…':'Gerar orçamento'}</button><button className="secondary" disabled={!loaded||saving||simulationSaving||quoteGenerating} onClick={()=>void clearSheet()}><Eraser size={17}/> Limpar</button><button className="secondary" disabled={saving||simulationSaving||quoteGenerating} onClick={loadExample}>Preencher exemplo</button></div><output className="notice">{status}</output><label htmlFor="product-name">Nome do produto<input id="product-name" value={sheet.name} onChange={event=>change('name',event.target.value)} aria-invalid={!!errors.name} aria-describedby={errors.name?'name-error':undefined}/>{errors.name&&<span className="field-error" id="name-error">{errors.name}</span>}</label></section>
+
+  <section className="panel">
+   <h2>Orçamento</h2>
+   <label htmlFor="quote-quantity">Quantidade de peças no orçamento
+    <input id="quote-quantity" inputMode="numeric" value={quoteQuantityInput}
+     onChange={event=>{
+      const value=event.target.value;
+      setSheet(current=>({...current,quoteQuantity:value}));
+      setStatus('Quantidade do orçamento atualizada.');
+     }}
+     aria-invalid={quoteAttempted&&Boolean(quoteQuantityError)}
+     aria-describedby={quoteAttempted&&quoteQuantityError?'quote-quantity-help quote-quantity-error':'quote-quantity-help'}/>
+   </label>
+   <p className="muted" id="quote-quantity-help">Informe o total de peças solicitado pelo cliente. As peças por lote são usadas para calcular o custo unitário.</p>
+   {quoteAttempted&&quoteQuantityError&&<p className="field-error" id="quote-quantity-error">{quoteQuantityError}</p>}
+   {!quoteQuantityError&&quoteTotalCents!==null&&quoteUnitCents!==null&&<p aria-live="polite">{quoteQuantity.toLocaleString('pt-BR')} × {money(quoteUnitCents/100)} = <strong>{money(quoteTotalCents/100)}</strong></p>}
+  </section>
 
   <div className="calculator-layout"><section className="panel calculator-result" aria-live="polite"><p className="eyebrow">RESULTADO DA FICHA</p><h2>{sheet.name||'Seu produto'}</h2>{!result?<><p className="callout">Cálculo incompleto. Revise os campos indicados abaixo. Campo vazio não significa custo zero.</p><p>{Object.keys(errors).length} {Object.keys(errors).length===1?'campo precisa':'campos precisam'} de revisão.</p></>:<><div className="result-pair"><div><small>Custo por unidade</small><strong>{money(result.unit)}</strong></div><div><small>Preço mínimo para a margem desejada</small><strong>{money(result.suggested)}</strong></div></div><dl>{result.parts.map(([name,value])=><div key={name}><dt>{name}</dt><dd>{money(value)}</dd></div>)}<div><dt>Custo do lote</dt><dd>{money(result.batch)}</dd></div><div><dt>Tarifa fixa + frete por unidade</dt><dd>{money(result.expenses)}</dd></div>{result.price!==null&&<><div><dt>Preço informado</dt><dd>{money(result.price)}</dd></div><div><dt>Taxas no preço informado</dt><dd>{money(result.price*result.rates)}</dd></div><div><dt>Contribuição por unidade</dt><dd>{money(result.contribution!)}</dd></div><div><dt>Margem no preço informado</dt><dd>{result.actualMargin!.toLocaleString('pt-BR',{maximumFractionDigits:2})}%</dd></div></>}</dl>{result.contribution!==null&&result.contribution<0&&<p className="field-error">O preço informado não cobre os custos e as despesas desta ficha.</p>}<p className="footnote">Margem é a parcela da venda que sobra após os custos e taxas informados. A sugestão é arredondada para cima no centavo.</p></>}</section>
 
