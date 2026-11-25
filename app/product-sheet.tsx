@@ -46,7 +46,15 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
  const quoteQuantity=/^\d+$/.test(quoteQuantityInput.trim())?Number(quoteQuantityInput):NaN;
  const validQuoteQuantity=Number.isSafeInteger(quoteQuantity)&&quoteQuantity>0;
  const printDuration=sheet.printDuration??formatPrintDuration(sheet.hours);
- const estimatedDays=estimateProductionDays(quoteQuantity,number(sheet.batch),printMinutes(printDuration));
+ const batchQuantity=number(sheet.batch);
+ const batchMinutes=printMinutes(printDuration);
+ const estimatedDays=estimateProductionDays(quoteQuantity,batchQuantity,batchMinutes);
+ const estimatedBatches=estimatedDays===null?0:Math.ceil(quoteQuantity/batchQuantity);
+ const deadlineInputs=[
+  !validQuoteQuantity?'Quantidade de peças no orçamento':null,
+  !Number.isSafeInteger(batchQuantity)||batchQuantity<1?'Peças produzidas no lote':null,
+  !Number.isSafeInteger(batchMinutes)||batchMinutes<1?'Impressão do lote (HH:MM, maior que 00:00)':null,
+ ].filter(Boolean);
  const manualDeadline=sheet.quoteDeadlineManual??number(sheet.productionDays)>0;
  const quoteDeadline=manualDeadline?sheet.productionDays:String(estimatedDays??'');
  const quoteUnitCents=result?Math.round((result.price??result.suggested)*100):null;
@@ -290,7 +298,14 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
      setStatus('Prazo do orçamento atualizado.');
     }} aria-invalid={Boolean(errors.productionDays)} aria-describedby={errors.productionDays?'quote-deadline-help quote-deadline-error':'quote-deadline-help'}/>
    </label>
-   <p className="muted" id="quote-deadline-help">A estimativa considera 24 horas de impressão por dia útil. Você pode ajustar o prazo ou informar 0 para exibir “a combinar”.</p>
+   <div className="muted" id="quote-deadline-help" aria-live="polite">
+    {estimatedDays!==null
+     ?<p>Estimativa automática: {estimatedDays.toLocaleString('pt-BR')} {estimatedDays===1?'dia útil':'dias úteis'} para {estimatedBatches.toLocaleString('pt-BR')} {estimatedBatches===1?'lote':'lotes'}, contando 24 horas de impressão por dia útil.</p>
+     :deadlineInputs.length>0
+      ?<p>Para calcular o prazo, preencha: {deadlineInputs.join(', ')}.</p>
+      :<p>Não foi possível estimar o prazo. Revise a quantidade e o tempo de impressão.</p>}
+    <p>{manualDeadline?'O prazo foi ajustado manualmente. Use “Usar prazo automático” para voltar a acompanhar a estimativa.':'Você pode ajustar o prazo para o cliente ou informar 0 para exibir “a combinar”.'}</p>
+   </div>
    {errors.productionDays&&<p className="field-error" id="quote-deadline-error">{errors.productionDays}</p>}
    {manualDeadline&&<button type="button" className="secondary" onClick={()=>{
     setSheet(current=>({...current,productionDays:'0',quoteDeadlineManual:false}));
