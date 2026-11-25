@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {Archive,Clock3,Eraser,FileText,FolderOpen,Save,Search,Trash2} from 'lucide-react';
-import {blank,example,calculate,normalizeSheet,number,printMinutes,formatPrintDuration,formatDurationMinutes,estimateQuoteProduction,type Sheet,type SupplyUse} from '@/lib/pricing';
+import {blank,example,calculate,normalizeSheet,number,printMinutes,formatPrintDuration,formatDurationMinutes,estimateQuoteProduction,quotePrintHoursPerWorkday,type Sheet,type SupplyUse} from '@/lib/pricing';
 import {money} from '@/lib/demo';
 import {supabase} from '@/lib/supabase';
 
@@ -299,7 +299,7 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
    </label>
    <div className="muted" id="quote-deadline-help" aria-live="polite">
     {estimate
-     ?<p>Estimativa automática: {estimate.batches.toLocaleString('pt-BR')} {estimate.batches===1?'lote':'lotes'} × {formatDurationMinutes(printTimeMinutes)} = {formatDurationMinutes(estimate.totalMinutes)} de impressão (HH:MM). Prazo de {estimate.days.toLocaleString('pt-BR')} {estimate.days===1?'dia útil':'dias úteis'}, considerando 24 horas por dia útil.</p>
+     ?<p>Estimativa automática: {estimate.batches.toLocaleString('pt-BR')} {estimate.batches===1?'lote':'lotes'} × {formatDurationMinutes(printTimeMinutes)} = {formatDurationMinutes(estimate.totalMinutes)} de impressão (HH:MM). Prazo de {estimate.days.toLocaleString('pt-BR')} {estimate.days===1?'dia útil':'dias úteis'}, considerando {quotePrintHoursPerWorkday} horas por dia útil.</p>
      :deadlineInputs.length>0
       ?<p>Para calcular o prazo, preencha: {deadlineInputs.join(', ')}.</p>
       :<p>Não foi possível estimar o prazo. Revise a quantidade e o tempo de impressão.</p>}
