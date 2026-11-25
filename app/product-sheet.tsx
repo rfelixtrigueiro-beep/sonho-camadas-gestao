@@ -16,7 +16,7 @@ const environment=import.meta.env.BASE_URL.includes('/desenvolvimento/')?'desenv
 const sortByStatusAndName=<T extends {ativo:boolean;nome:string}>(items:T[])=>items.sort((a,b)=>Number(b.ativo)-Number(a.ativo)||a.nome.localeCompare(b.nome,'pt-BR'));
 const groups=[
  {title:'Trabalho',hint:'Informe apenas o tempo de trabalho manual. Os materiais de acabamento e embalagem devem ser adicionados como insumos.',fields:[['minutes','Trabalho manual do lote (minutos)'],['labor','Mão de obra (R$/hora)'],['loss','Reserva de perdas dos insumos (%)']]},
- {title:'Canal de venda',hint:'Taxas percentuais incidem sobre o preço final efetivamente cobrado. Valores fixos e frete são por unidade vendida. Use 0 onde não se aplica.',fields:[['commission','Comissão (%)'],['payment','Taxa de pagamento (%)'],['tax','Impostos (%)'],['fixed','Tarifa fixa por unidade (R$)'],['shipping','Frete pago por você por unidade (R$)'],['margin','Margem desejada sobre a venda (%)'],['price','Preço final que pretende cobrar (R$) — opcional'],['productionDays','Dias para produção (opcional)']]},
+ {title:'Canal de venda',hint:'Taxas percentuais incidem sobre o preço final efetivamente cobrado. Valores fixos e frete são por unidade vendida. Use 0 onde não se aplica.',fields:[['commission','Comissão (%)'],['payment','Taxa de pagamento (%)'],['tax','Impostos (%)'],['fixed','Tarifa fixa por unidade (R$)'],['shipping','Frete pago por você por unidade (R$)'],['margin','Margem desejada sobre a venda (%)'],['price','Preço final que pretende cobrar (R$) — opcional']]},
 ];
 
 async function loadPdfImage(url:string):Promise<PdfImage|null>{
@@ -207,14 +207,39 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
 
    doc.setFillColor(237,245,244);doc.roundedRect(112,126,pageWidth-margin-112,22,2,2,'F');doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(18,100,84);doc.text('VALOR TOTAL',118,134);doc.setFont('helvetica','bold');doc.setFontSize(17);doc.text(money(total),pageWidth-margin-5,143,{align:'right'});
    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(23,52,65);doc.text('Informações do orçamento',margin,165);
-   doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(86,101,115);const informedProductionDays=sheet.productionDays.trim()?number(sheet.productionDays):0;const productionDays=informedProductionDays>0?informedProductionDays:null;const details=[`Quantidade: ${quantity.toLocaleString('pt-BR')} peça${quantity===1?'':'s'}.`,productionDays===null?'Prazo de produção: a combinar.':`Prazo de produção: ${productionDays.toLocaleString('pt-BR')} dia${productionDays===1?'':'s'}.`,`Impressora prevista: ${sheet.printerName}.`,'Condições de pagamento: a combinar.'];doc.text(details.map(item=>`• ${item}`),margin,174,{lineHeightFactor:1.7,maxWidth:contentWidth});
-   doc.setDrawColor(220,227,233);doc.line(margin,274,pageWidth-margin,274);doc.setFontSize(7.5);doc.setTextColor(113,131,142);doc.text('Orçamento gerado pelo sistema de gestão Sonho em Camadas 3D.',margin,280);doc.text('Valores calculados a partir da ficha atual.',pageWidth-margin,280,{align:'right'});
+   doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(86,101,115);
+   const productionDays=number(sheet.productionDays);
+   const deadline=productionDays>0?`${productionDays.toLocaleString('pt-BR')} dia${productionDays===1?'':'s'}`:'a combinar';
+   doc.text(`Prazo de produção: ${deadline}.`,margin,174);
+   doc.text('Condições de pagamento: a combinar.',margin,180);
+   const notes=sheet.quoteNotes?.trim();
+   if(notes){
+    const lines:string[]=doc.splitTextToSize(`Observação: ${notes}`,contentWidth);
+    let y=188;
+    for(const line of lines){
+     if(y>266){
+      doc.addPage();
+      doc.setFont('helvetica','bold');doc.text('Informações do orçamento (continuação)',margin,18);
+      doc.setFont('helvetica','normal');
+      y=26;
+     }
+     if(line)doc.text(line,margin,y);
+     y+=5;
+    }
+   }
+   for(let page=1;page<=doc.getNumberOfPages();page++){
+    doc.setPage(page);
+    doc.setDrawColor(220,227,233);doc.line(margin,274,pageWidth-margin,274);
+    doc.setFontSize(7.5);doc.setTextColor(113,131,142);
+    doc.text('Orçamento gerado pelo sistema de gestão Sonho em Camadas 3D.',margin,280);
+    doc.text('Valores calculados a partir da ficha atual.',pageWidth-margin,280,{align:'right'});
+   }
    const filename=sheet.name.trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase()||'produto';
    doc.save(`orcamento-${filename}-${today.toISOString().slice(0,10)}.pdf`);setStatus('Orçamento gerado e baixado. A ficha e o estoque não foram alterados.');
   }catch{setStatus('Não foi possível gerar o orçamento. Tente novamente.')}finally{setQuoteGenerating(false)}
  }
 
- function field(k:string,label:string){return <label key={k} htmlFor={`field-${k}`}>{label}<input id={`field-${k}`} inputMode="decimal" value={sheet[k as keyof Sheet] as string} onChange={event=>change(k as keyof Sheet,event.target.value)} aria-invalid={!!errors[k]} aria-describedby={errors[k]?`error-${k}`:undefined}/>{errors[k]&&<span className="field-error" id={`error-${k}`}>{errors[k]}</span>}</label>}
+ function field(k:string,label:string){return <label key={k} htmlFor={`field-${k}`}>{label}<input id={`field-${k}`} inputMode={k==='productionDays'?'numeric':'decimal'} value={sheet[k as keyof Sheet] as string} onChange={event=>change(k as keyof Sheet,event.target.value)} aria-invalid={!!errors[k]} aria-describedby={errors[k]?`error-${k}`:undefined}/>{errors[k]&&<span className="field-error" id={`error-${k}`}>{errors[k]}</span>}</label>}
 
  return <div className="product-sheet">
   <section className="panel"><div className="section-title"><div><h2>Ficha do seu produto</h2><p className="muted">Preencha os dados para calcular o custo e o preço sugerido.</p></div><span className="badge">{saved?'Produto criado':editingSimulationId?'Editando cálculo':'Rascunho'}</span></div><p className="callout">{editingSimulationId?'Você está alterando um cálculo do histórico. Salve as alterações para atualizar o mesmo registro, sem criar uma cópia.':'Você pode arquivar somente a simulação, gerar um orçamento ou salvar o produto. Ao salvar o produto, o cálculo também será arquivado automaticamente.'}</p><div className="actions"><button disabled={!loaded||!result||saving||saved||simulationSaving||quoteGenerating} onClick={()=>void saveProduct()}><Save size={17}/>{saving?'Salvando…':saved?'Produto salvo':'Salvar produto'}</button><button className="secondary" disabled={!loaded||!result||saving||simulationSaving||quoteGenerating} onClick={()=>void saveSimulation()}><Archive size={17}/>{simulationSaving?'Salvando…':editingSimulationId?'Salvar alterações':'Salvar simulação'}</button>{editingSimulationId&&<button className="secondary" disabled={saving||simulationSaving||quoteGenerating} onClick={cancelSimulationEditing}>Cancelar edição</button>}<button className="secondary" disabled={!loaded||saving||simulationSaving||quoteGenerating} onClick={()=>void generateQuote()}><FileText size={17}/>{quoteGenerating?'Gerando…':'Gerar orçamento'}</button><button className="secondary" disabled={!loaded||saving||simulationSaving||quoteGenerating} onClick={()=>void clearSheet()}><Eraser size={17}/> Limpar</button><button className="secondary" disabled={saving||simulationSaving||quoteGenerating} onClick={loadExample}>Preencher exemplo</button></div><output className="notice">{status}</output><label htmlFor="product-name">Nome do produto<input id="product-name" value={sheet.name} onChange={event=>change('name',event.target.value)} aria-invalid={!!errors.name} aria-describedby={errors.name?'name-error':undefined}/>{errors.name&&<span className="field-error" id="name-error">{errors.name}</span>}</label></section>
@@ -234,6 +259,15 @@ export default function ProductSheet({userId,catalogVersion=0}:{userId:string;ca
    <p className="muted" id="quote-quantity-help">Informe o total de peças solicitado pelo cliente. As peças por lote são usadas para calcular o custo unitário.</p>
    {quoteAttempted&&quoteQuantityError&&<p className="field-error" id="quote-quantity-error">{quoteQuantityError}</p>}
    {!quoteQuantityError&&quoteTotalCents!==null&&quoteUnitCents!==null&&<p aria-live="polite">{quoteQuantity.toLocaleString('pt-BR')} × {money(quoteUnitCents/100)} = <strong>{money(quoteTotalCents/100)}</strong></p>}
+   {field('productionDays','Prazo de produção em dias (opcional)')}
+   <p className="muted">Deixe em branco ou informe 0 para exibir “a combinar” no orçamento.</p>
+   <label className="wide-field" htmlFor="quote-notes">Observação (opcional)
+    <textarea id="quote-notes" className="quote-notes" rows={3} value={sheet.quoteNotes??''} onChange={event=>{
+     const value=event.target.value;
+     setSheet(current=>({...current,quoteNotes:value}));
+     setStatus('Observação do orçamento atualizada.');
+    }}/>
+   </label>
   </section>
 
   <div className="calculator-layout"><section className="panel calculator-result" aria-live="polite"><p className="eyebrow">RESULTADO DA FICHA</p><h2>{sheet.name||'Seu produto'}</h2>{!result?<><p className="callout">Cálculo incompleto. Revise os campos indicados abaixo. Campo vazio não significa custo zero.</p><p>{Object.keys(errors).length} {Object.keys(errors).length===1?'campo precisa':'campos precisam'} de revisão.</p></>:<><div className="result-pair"><div><small>Custo por unidade</small><strong>{money(result.unit)}</strong></div><div><small>Preço mínimo para a margem desejada</small><strong>{money(result.suggested)}</strong></div></div><dl>{result.parts.map(([name,value])=><div key={name}><dt>{name}</dt><dd>{money(value)}</dd></div>)}<div><dt>Custo do lote</dt><dd>{money(result.batch)}</dd></div><div><dt>Tarifa fixa + frete por unidade</dt><dd>{money(result.expenses)}</dd></div>{result.price!==null&&<><div><dt>Preço informado</dt><dd>{money(result.price)}</dd></div><div><dt>Taxas no preço informado</dt><dd>{money(result.price*result.rates)}</dd></div><div><dt>Contribuição por unidade</dt><dd>{money(result.contribution!)}</dd></div><div><dt>Margem no preço informado</dt><dd>{result.actualMargin!.toLocaleString('pt-BR',{maximumFractionDigits:2})}%</dd></div></>}</dl>{result.contribution!==null&&result.contribution<0&&<p className="field-error">O preço informado não cobre os custos e as despesas desta ficha.</p>}<p className="footnote">Margem é a parcela da venda que sobra após os custos e taxas informados. A sugestão é arredondada para cima no centavo.</p></>}</section>

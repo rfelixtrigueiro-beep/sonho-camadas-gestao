@@ -244,3 +244,4 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid 
 .oauth-actions{display:flex;gap:10px;flex-wrap:wrap}
 .oauth-actions button{flex:1;min-width:150px}
 .oauth-message{color:#8a4b14}
+.product-sheet .quote-notes{display:block;width:100%;padding:10px 12px;border:1px solid #bdcbd4;border-radius:8px;background:#fff;color:#173441;font:inherit;resize:vertical}

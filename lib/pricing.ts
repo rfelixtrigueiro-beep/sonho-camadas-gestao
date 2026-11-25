@@ -1,5 +1,5 @@
 export type SupplyUse={supplyId:string;name:string;quantity:string;unit:string;costPerUnit:string};
-export type Sheet={name:string;batch:string;supplies:SupplyUse[];hours:string;printerId:string;printerName:string;printerWatts:string;printerKwh:string;printerHourly:string;minutes:string;labor:string;loss:string;commission:string;payment:string;tax:string;fixed:string;shipping:string;margin:string;price:string;productionDays:string;quoteQuantity?:string};
+export type Sheet={name:string;batch:string;supplies:SupplyUse[];hours:string;printerId:string;printerName:string;printerWatts:string;printerKwh:string;printerHourly:string;minutes:string;labor:string;loss:string;commission:string;payment:string;tax:string;fixed:string;shipping:string;margin:string;price:string;productionDays:string;quoteQuantity?:string;quoteNotes?:string};
 
 export const blank:Sheet={name:'',batch:'',supplies:[],hours:'',printerId:'',printerName:'',printerWatts:'',printerKwh:'',printerHourly:'',minutes:'0',labor:'0',loss:'0',commission:'0',payment:'0',tax:'0',fixed:'0',shipping:'0',margin:'0',price:'0',productionDays:'0'};
 export const example:Sheet={name:'Vaso Aurora (exemplo)',batch:'10',supplies:[],hours:'6',printerId:'',printerName:'',printerWatts:'',printerKwh:'',printerHourly:'',minutes:'30',labor:'24',loss:'5',commission:'0',payment:'0',tax:'0',fixed:'0',shipping:'0',margin:'35',price:'20',productionDays:'5'};
@@ -86,7 +86,8 @@ export function normalizeSheet(v:unknown):Sheet|null{
  }:{printerId:'',printerName:'',printerWatts:'',printerKwh:'',printerHourly:''};
  const productionDays=typeof source.productionDays==='string'?source.productionDays:blank.productionDays;
  const quoteQuantity=typeof source.quoteQuantity==='string'?source.quoteQuantity:'';
- const normalized=Object.assign({},blank,Object.fromEntries(scalarKeys.map(k=>[k,source[k]])),printer,{supplies,productionDays,quoteQuantity}) as Sheet;
+ const quoteNotes=typeof source.quoteNotes==='string'?source.quoteNotes:'';
+ const normalized=Object.assign({},blank,Object.fromEntries(scalarKeys.map(k=>[k,source[k]])),printer,{supplies,productionDays,quoteQuantity,quoteNotes}) as Sheet;
  for(const key of ['minutes','labor','loss','commission','payment','tax','fixed','shipping','margin','price','productionDays'] as const)if(!normalized[key].trim())normalized[key]='0';
  return normalized;
 }
