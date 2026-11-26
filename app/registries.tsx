@@ -5,6 +5,7 @@ import {money} from '@/lib/demo';
 import {number} from '@/lib/pricing';
 import {supabase} from '@/lib/supabase';
 import SellerRegistry,{type Seller,type SellerUser} from './seller-registry';
+import CustomerRegistry from './customer-registry';
 import './registries.css';
 
 type Unit='un'|'g'|'kg'|'ml'|'l'|'cm'|'m';
@@ -13,7 +14,7 @@ type PrinterItem={id:string;nome:string;potencia_watts:number;tarifa_energia_kwh
 type SupplyForm={nome:string;valor_compra:string;quantidade_compra:string;unidade_medida:Unit};
 type SupplyErrors=Partial<Record<keyof SupplyForm,string>>;
 type PrinterForm={nome:string;potencia_watts:string;tarifa_energia_kwh:string;custo_maquina_hora:string};
-type RegistryTab='supplies'|'printers'|'sellers';
+type RegistryTab='supplies'|'printers'|'sellers'|'customers';
 
 const emptySupply:SupplyForm={nome:'',valor_compra:'',quantidade_compra:'',unidade_medida:'un'};
 const emptyPrinter:PrinterForm={nome:'',potencia_watts:'',tarifa_energia_kwh:'',custo_maquina_hora:''};
@@ -22,7 +23,7 @@ const environment=import.meta.env.BASE_URL.includes('/desenvolvimento/')?'desenv
 const sortByStatusAndName=<T extends {ativo:boolean;nome:string}>(items:T[])=>items.sort((a,b)=>Number(b.ativo)-Number(a.ativo)||a.nome.localeCompare(b.nome,'pt-BR'));
 const supplyQuantity=(value:string)=>/^\d{1,3}(?:\.\d{3})+$/.test(value.trim())?Number(value.replaceAll('.','')):number(value);
 
-export default function Registries({onCatalogChanged}:{onCatalogChanged:()=>void}){
+export default function Registries({onCatalogChanged,customerVersion,onCustomerChanged}:{onCatalogChanged:()=>void;customerVersion:number;onCustomerChanged:()=>void}){
  const [tab,setTab]=useState<RegistryTab>('supplies');
  const [supplies,setSupplies]=useState<Supply[]>([]),[printers,setPrinters]=useState<PrinterItem[]>([]),[sellers,setSellers]=useState<Seller[]>([]),[users,setUsers]=useState<SellerUser[]>([]);
  const [loading,setLoading]=useState(true),[status,setStatus]=useState('');
@@ -46,7 +47,7 @@ export default function Registries({onCatalogChanged}:{onCatalogChanged:()=>void
   setSellers((sellersResult.data||[]) as Seller[]);setUsers((usersResult.data||[]) as SellerUser[]);setLoading(false);
  },[]);
 
- useEffect(()=>{const timer=window.setTimeout(()=>{const saved=sessionStorage.getItem('farm.registryTab') as RegistryTab|null;if(saved&&['supplies','printers','sellers'].includes(saved))setTab(saved);void load()},0);return()=>window.clearTimeout(timer)},[load]);
+ useEffect(()=>{const timer=window.setTimeout(()=>{const saved=sessionStorage.getItem('farm.registryTab') as RegistryTab|null;if(saved&&['supplies','printers','sellers','customers'].includes(saved))setTab(saved);void load()},0);return()=>window.clearTimeout(timer)},[load]);
  function chooseTab(next:RegistryTab){setTab(next);sessionStorage.setItem('farm.registryTab',next)}
  const costPerUnit=(supply:Supply)=>Number(supply.valor_compra)/Number(supply.quantidade_compra);
  function resetSupply(){setSupplyForm(emptySupply);setSupplyErrors({});setEditingSupplyId(null);setSupplyOpen(false)}
@@ -92,7 +93,7 @@ export default function Registries({onCatalogChanged}:{onCatalogChanged:()=>void
  return <section className="registries-module" aria-label="Cadastros da Farm">
   <div className="registry-overview" aria-label="Resumo dos cadastros">{tabs.map(([id,label,Icon,total])=><article key={id}><span><Icon size={20}/></span><div><small>{label}</small><strong>{loading?'—':total}</strong><em>{loading?'Carregando':`${id==='supplies'?supplies.filter(item=>item.ativo).length:id==='printers'?printers.filter(item=>item.ativo).length:sellers.filter(item=>item.ativo).length} em uso`}</em></div></article>)}</div>
   <section className="panel registry-workspace"><div className="registry-heading"><div><h2>Cadastros da Farm</h2><p className="muted">Escolha uma categoria para consultar, criar ou atualizar registros.</p></div><button className="secondary registry-refresh" disabled={loading} onClick={()=>void load()}><RefreshCw size={16}/>{loading?'Atualizando…':'Atualizar'}</button></div>
-   <div className="registry-tabs" role="tablist" aria-label="Tipos de cadastro">{tabs.map(([id,label,Icon,total])=><button key={id} type="button" role="tab" aria-selected={tab===id} className={tab===id?'active':''} onClick={()=>chooseTab(id)}><Icon size={18}/><span>{label}</span><strong>{total}</strong></button>)}</div>
+   <div className="registry-tabs" role="tablist" aria-label="Tipos de cadastro">{tabs.map(([id,label,Icon,total])=><button key={id} type="button" role="tab" aria-selected={tab===id} className={tab===id?'active':''} onClick={()=>chooseTab(id)}><Icon size={18}/><span>{label}</span><strong>{total}</strong></button>)}<button type="button" role="tab" aria-selected={tab==='customers'} className={tab==='customers'?'active':''} onClick={()=>chooseTab('customers')}><UsersRound size={18}/><span>Clientes</span></button></div>
    {status&&<output className="notice" aria-live="polite">{status}</output>}
    <div role="tabpanel" hidden={tab!=='supplies'} className="registry-tab-panel"><div className="section-title"><div><h3>Insumos</h3><p className="muted">Filamentos, argolas, colas, sacolas e outros materiais usados nos produtos.</p></div><button type="button" className="secondary" onClick={()=>{if(supplyOpen)resetSupply();else{setSupplyErrors({});setSupplyOpen(true)}}}>{supplyOpen?<X size={17}/>:<PackagePlus size={17}/>} {supplyOpen?'Fechar':'Novo insumo'}</button></div>
     {supplyOpen&&<form className="supply-form registry-form" onSubmit={saveSupply} noValidate><label>Nome do insumo<input value={supplyForm.nome} onChange={event=>{setSupplyForm({...supplyForm,nome:event.target.value});setSupplyErrors(current=>({...current,nome:undefined}))}} maxLength={120} placeholder="Ex.: PLA dourado" aria-invalid={!!supplyErrors.nome}/>{supplyErrors.nome&&<span className="field-error">{supplyErrors.nome}</span>}</label><label>Valor pago (R$)<input type="text" inputMode="decimal" value={supplyForm.valor_compra} onChange={event=>{setSupplyForm({...supplyForm,valor_compra:event.target.value});setSupplyErrors(current=>({...current,valor_compra:undefined}))}} placeholder="0,00" aria-invalid={!!supplyErrors.valor_compra}/>{supplyErrors.valor_compra&&<span className="field-error">{supplyErrors.valor_compra}</span>}</label><label>Quantidade da embalagem<input type="text" inputMode="decimal" value={supplyForm.quantidade_compra} onChange={event=>{setSupplyForm({...supplyForm,quantidade_compra:event.target.value});setSupplyErrors(current=>({...current,quantidade_compra:undefined}))}} placeholder="Ex.: 1.000" aria-invalid={!!supplyErrors.quantidade_compra}/>{supplyErrors.quantidade_compra&&<span className="field-error">{supplyErrors.quantidade_compra}</span>}</label><label>Unidade de medida<select value={supplyForm.unidade_medida} onChange={event=>setSupplyForm({...supplyForm,unidade_medida:event.target.value as Unit})}>{units.map(([value,label])=><option value={value} key={value}>{label} ({value})</option>)}</select></label><p className="field-hint supply-hint">{editingSupplyId?'Altere os dados e salve. Fichas anteriores mantêm o custo registrado.':'Para filamento, cadastre o rolo em gramas. Exemplo: R$ 120,00 por 1.000 g.'}</p><div className="registry-form-actions"><button type="submit" disabled={savingSupply}>{savingSupply?'Salvando…':editingSupplyId?'Salvar alterações':'Salvar insumo'}</button>{editingSupplyId&&<button type="button" className="secondary" onClick={resetSupply}>Cancelar edição</button>}</div></form>}
@@ -103,6 +104,7 @@ export default function Registries({onCatalogChanged}:{onCatalogChanged:()=>void
     <div className="printer-summary" aria-label="Impressoras cadastradas">{printers.length===0?<p className="muted">Nenhuma impressora cadastrada.</p>:printers.map(item=><article key={item.id} className={item.ativo?'':'registry-inactive'}><div className="registry-card-title"><strong>{item.nome}</strong><span className={`status-chip ${item.ativo?'active':'inactive'}`}>{item.ativo?'Ativa':'Inativa'}</span></div><span>{Number(item.potencia_watts).toLocaleString('pt-BR')} W · {money(Number(item.tarifa_energia_kwh))}/kWh</span><small>{money(Number(item.custo_maquina_hora))} por hora de máquina</small><div className="registry-card-actions"><button className="secondary" onClick={()=>editPrinter(item)}>Editar</button><button className="secondary" onClick={()=>void togglePrinter(item)}>{item.ativo?'Desativar':'Ativar'}</button></div></article>)}</div>
    </div>
    <div role="tabpanel" hidden={tab!=='sellers'} className="registry-tab-panel"><SellerRegistry sellers={sellers} users={users} onChanged={load}/></div>
+   {tab==='customers'&&<div role="tabpanel" className="registry-tab-panel"><CustomerRegistry environment={environment} version={customerVersion} onChanged={onCustomerChanged}/></div>}
   </section>
  </section>;
 }
