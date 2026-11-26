@@ -77,6 +77,11 @@
 .order-results{margin:16px 0 0;color:#657780;font-size:12px;text-align:right}
 .order-row-actions{display:flex;grid-column:1/-1;justify-content:flex-end;gap:8px;padding-top:10px;border-top:1px solid #e8edef}
 .order-row-actions button{min-height:34px!important;padding:6px 10px!important;font-size:12px!important}
+.order-row-actions{flex-wrap:wrap}
+.order-receipts.is-open{flex:1 0 100%;min-width:0}
+.order-receipts-panel{margin-top:8px;padding:12px;border:1px solid #dce5e8;border-radius:8px;background:#f8fafb}
+.order-receipts-panel output{display:block;font-size:13px}
+.order-receipt-payment{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid #dce5e8;font-size:13px}
 .cancel-order-button{background:#fff!important;border-color:#debaba!important;color:#973b3b!important}
 .cancel-order-button:hover{background:#fff2f1!important}
 .cancellation-reason{grid-column:1/-1;margin:0;padding:10px 12px;border-radius:8px;background:#fff4f2;color:#833a35;font-size:12px}
