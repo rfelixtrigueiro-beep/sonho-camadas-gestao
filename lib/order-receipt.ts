@@ -10,6 +10,12 @@ export type ReceiptPayment={
  pagamento_origem_id:string|null;
 };
 
+export type ReceiptOrder={
+ numero:number;
+ cliente_nome:string;
+ items:ReadonlyArray<{produto_nome:string;quantidade:number}>;
+};
+
 export const receiptOrderNumber=(number:number)=>String(number).padStart(4,'0');
 export const receiptMoney=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
 export const receiptDate=(date:string)=>new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR');
@@ -21,7 +27,7 @@ export function receiptablePayments(payments:ReceiptPayment[]){
   .sort((a,b)=>b.data_movimentacao.localeCompare(a.data_movimentacao)||a.id.localeCompare(b.id));
 }
 
-export function renderOrderReceipt(doc:jsPDF,order:{numero:number;cliente_nome:string},payment:ReceiptPayment,logo:PdfImage|null){
+export function renderOrderReceipt(doc:jsPDF,order:ReceiptOrder,payment:ReceiptPayment,logo:PdfImage|null){
  const margin=18;
  const width=doc.internal.pageSize.getWidth()-margin*2;
  let titleX=margin;
@@ -70,4 +76,43 @@ export function renderOrderReceipt(doc:jsPDF,order:{numero:number;cliente_nome:s
  }
  doc.setFontSize(9);
  doc.text('Este recibo confirma o pagamento acima para o pedido indicado.',margin,y+4);
+ if(!order.items.length)return;
+
+ const bottom=doc.internal.pageSize.getHeight()-18;
+ y+=17;
+ function itemHeader(continued=false){
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(11);
+  doc.setTextColor(23,52,65);
+  doc.text(continued?'Itens do pedido (continuação)':'Itens do pedido',margin,y);
+  y+=4;
+  doc.setFillColor(23,52,65);
+  doc.rect(margin,y,width,9,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(8);
+  doc.text('DESCRIÇÃO',margin+4,y+6);
+  doc.text('QTD.',margin+width-4,y+6,{align:'right'});
+  y+=9;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9);
+  doc.setTextColor(23,52,65);
+ }
+
+ if(y+24>bottom){doc.addPage();y=21;}
+ itemHeader();
+ for(const item of order.items){
+  const lines=doc.splitTextToSize(item.produto_nome,width-28) as string[];
+  let rowOffset=0;
+  while(rowOffset<lines.length){
+   if(y+10>bottom){doc.addPage();y=21;itemHeader(true);}
+   const count=Math.min(lines.length-rowOffset,Math.floor((bottom-y-6)/4));
+   const rowHeight=6+count*4;
+   doc.setDrawColor(220,227,233);
+   doc.rect(margin,y,width,rowHeight);
+   lines.slice(rowOffset,rowOffset+count).forEach((line,index)=>doc.text(line,margin+4,y+6+index*4));
+   if(rowOffset===0)doc.text(item.quantidade.toLocaleString('pt-BR'),margin+width-4,y+6,{align:'right'});
+   rowOffset+=count;
+   y+=rowHeight;
+  }
+ }
 }

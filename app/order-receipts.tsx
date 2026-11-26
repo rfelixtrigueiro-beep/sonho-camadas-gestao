@@ -4,9 +4,9 @@ import {useState} from 'react';
 import {Download,ReceiptText} from 'lucide-react';
 import {supabase} from '@/lib/supabase';
 import {loadPdfBrandLogo} from '@/lib/pdf-image';
-import {receiptablePayments,receiptDate,receiptMoney,receiptOrderNumber,renderOrderReceipt,type ReceiptPayment} from '@/lib/order-receipt';
+import {receiptablePayments,receiptDate,receiptMoney,receiptOrderNumber,renderOrderReceipt,type ReceiptOrder,type ReceiptPayment} from '@/lib/order-receipt';
 
-type Props={order:{id:string;numero:number;cliente_nome:string};environment:string};
+type Props={order:ReceiptOrder&{id:string};environment:string};
 
 export default function OrderReceipts({order,environment}:Props){
  const [open,setOpen]=useState(false);
