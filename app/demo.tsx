@@ -21,6 +21,8 @@ export default function Demo({administrator,userId,boardOnly=false}:{administrat
  const sectionKey=`farm.activeSection.${userId}`;
  const [page,go]=useState(0);
  const [catalogVersion,setCatalogVersion]=useState(0);
+ const [customerVersion,setCustomerVersion]=useState(0);
+ const customerChanged=()=>setCustomerVersion(version=>version+1);
  const [sectionRestored,setSectionRestored]=useState(false);
  useEffect(()=>{const timer=window.setTimeout(()=>{const saved=Number(window.sessionStorage.getItem(sectionKey));const allowed=Number.isInteger(saved)&&saved>=0&&saved<nav.length&&(administrator||![1,3,4,8].includes(saved));if(allowed)go(saved);setSectionRestored(true)},0);return()=>window.clearTimeout(timer)},[administrator,sectionKey]);
  useEffect(()=>{if(sectionRestored)window.sessionStorage.setItem(sectionKey,String(page))},[page,sectionKey,sectionRestored]);
@@ -29,12 +31,12 @@ export default function Demo({administrator,userId,boardOnly=false}:{administrat
  return <SidebarProvider><Menu page={page} go={go} administrator={administrator}/><main><header className="app-header"><div className="crumb"><SidebarTrigger aria-label="Abrir menu"/>Farm <span>/</span> <strong>{nav[page][0]}</strong></div><span className="demo-pill">● Online</span></header><nav className="mobile-nav" aria-label="Navegação principal">{nav.map(([label,Icon],i)=>!administrator&&[1,3,4,8].includes(i)?null:<button key={label} className={page===i?'active':''} aria-current={page===i?'page':undefined} onClick={()=>go(i)}><Icon/><span>{label}</span></button>)}</nav><div className="canvas"><div className="heading"><div><p className="eyebrow">SUA FARM, EM CADA ETAPA</p><h1>{nav[page][0]}</h1><p>{descriptions[page]}</p></div></div>{note&&<div className="demo-note"><Info size={19}/><span>{note}</span></div>}
  {page===0&&<><div className="split"><section className="panel accent-panel"><p className="eyebrow">PRODUTOS E CUSTOS</p><h2>Calcule o custo<br/>de cada peça</h2><p>Preencha a ficha do produto, confira o preço sugerido e salve no Portfólio e no Estoque.</p><button disabled={!administrator} onClick={()=>go(1)}>Abrir calculadora <ArrowRight size={17}/></button></section><section className="panel"><p className="eyebrow">CATÁLOGO</p><h2>Portfólio e estoque</h2><p className="muted">Consulte os produtos cadastrados, fotos, preços, categorias e saldos disponíveis.</p><div className="actions"><button onClick={()=>go(6)}>Abrir Portfólio <ArrowRight size={17}/></button>{administrator&&<button className="secondary" onClick={()=>go(4)}>Ver Estoque</button>}</div></section><section className="panel"><p className="eyebrow">VENDAS</p><h2>Pedidos</h2><p className="muted">Crie novos pedidos e acompanhe precificação, aprovação e andamento da produção.</p><div className="actions"><button onClick={()=>go(2)}>Abrir Pedidos <ArrowRight size={17}/></button></div></section></div><Sellers administrator={administrator} userId={userId} quickSaleOnly/></>}
  {administrator&&<div hidden={page!==1}><ProductSheet userId={userId} catalogVersion={catalogVersion}/></div>}
- <div hidden={page!==2}><Orders administrator={administrator} userId={userId}/></div>
+ <div hidden={page!==2}><Orders administrator={administrator} userId={userId} customerVersion={customerVersion} onCustomerChanged={customerChanged}/></div>
  {administrator&&<div hidden={page!==3}><Production administrator={administrator} userId={userId}/></div>}
  {administrator&&page===4&&<Inventory/>}
- <div hidden={page!==5}><Receivables administrator={administrator}/></div>
+ <div hidden={page!==5}><Receivables administrator={administrator} customerVersion={customerVersion}/></div>
  <div hidden={page!==6}><Portfolio administrator={administrator} userId={userId}/></div>
  <div hidden={page!==7}><Sellers administrator={administrator} userId={userId}/></div>
- {administrator&&<div hidden={page!==8}><Registries onCatalogChanged={()=>setCatalogVersion(version=>version+1)}/></div>}
+ {administrator&&<div hidden={page!==8}><Registries onCatalogChanged={()=>setCatalogVersion(version=>version+1)} customerVersion={customerVersion} onCustomerChanged={customerChanged}/></div>}
  <footer>SONHO EM CAMADAS 3D <span>Sistema de gestão</span></footer></div></main></SidebarProvider>;
 }
