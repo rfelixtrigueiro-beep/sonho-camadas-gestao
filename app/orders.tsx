@@ -4,6 +4,7 @@ import {useCallback,useEffect,useMemo,useState} from 'react';
 import {CalendarDays,CheckCircle2,Clock3,ExternalLink,FileText,FilterX,ImagePlus,Pencil,Plus,RefreshCw,RotateCcw,Search,ShoppingBag,Trash2,UserRoundCheck,XCircle} from 'lucide-react';
 import {supabase} from '@/lib/supabase';
 import {type Seller} from './seller-registry';
+import {loadPdfBrandLogo} from '@/lib/pdf-image';
 import OrderReceipts from './order-receipts';
 import './orders.css';
 
@@ -15,17 +16,12 @@ type SelectedItem={quantity:number;price:number};
 type NewProduct={key:string;name:string;quantity:number;price:string;details:string;link:string;photo_urls:string[];files:File[]};
 type OrderForm={cliente_nome:string;cliente_telefone:string;cliente_email:string;cliente_documento:string;endereco_entrega:string;vendedor_cadastro_id:string;prazo_solicitado:string;forma_pagamento:string;observacoes:string};
 type Customer=Pick<Order,'cliente_nome'|'cliente_telefone'|'cliente_email'|'cliente_documento'|'endereco_entrega'>;
-type PdfImage={data:string;width:number;height:number};
 
 const emptyForm:OrderForm={cliente_nome:'',cliente_telefone:'',cliente_email:'',cliente_documento:'',endereco_entrega:'',vendedor_cadastro_id:'',prazo_solicitado:'',forma_pagamento:'',observacoes:''};
 const reais=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}),environment=import.meta.env.BASE_URL.includes('/desenvolvimento/')?'desenvolvimento':'producao';
 const pricingStatuses=new Set(['aguardando_precificacao','em_precificacao','precificado','aguardando_confirmacao_vendedor']),editableStatuses=new Set(['rascunho','aguardando_precificacao','em_precificacao','precificado','aguardando_confirmacao_vendedor','aguardando_aprovacao','devolvido_ajuste']),sellerCancellableStatuses=new Set(editableStatuses),administratorCancellableStatuses=new Set([...editableStatuses,'aprovado','em_producao','pronto']);
 const statusLabels:Record<string,string>={rascunho:'Rascunho',aguardando_precificacao:'Aguardando precificação',em_precificacao:'Em precificação',precificado:'Precificado',aguardando_confirmacao_vendedor:'Aguardando confirmação',aguardando_aprovacao:'Aguardando aprovação',devolvido_ajuste:'Devolvido para ajuste',reprovado:'Reprovado',aprovado:'Aprovado',em_producao:'Em produção',pronto:'Pronto',entregue:'Entregue',cancelado:'Cancelado'};
 const formatDate=(value:string|null)=>value?new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR'):'Não informado',orderNumber=(value:number)=>`#${String(value).padStart(4,'0')}`,makeNewProduct=():NewProduct=>({key:crypto.randomUUID(),name:'',quantity:1,price:'',details:'',link:'',photo_urls:[],files:[]});
-
-async function loadPdfImage(url:string):Promise<PdfImage|null>{
- try{const image=new Image();image.src=url;await image.decode();const maxSize=900,scale=Math.min(1,maxSize/Math.max(image.naturalWidth,image.naturalHeight)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));const context=canvas.getContext('2d');if(!context)return null;context.fillStyle='#ffffff';context.fillRect(0,0,canvas.width,canvas.height);context.drawImage(image,0,0,canvas.width,canvas.height);return{data:canvas.toDataURL('image/jpeg',.88),width:canvas.width,height:canvas.height}}catch{return null}
-}
 
 export default function Orders({administrator,userId}:{administrator:boolean;userId:string}){
  const draftKey=`farm.orderDraft.${environment}.${userId}`;
@@ -69,7 +65,7 @@ export default function Orders({administrator,userId}:{administrator:boolean;use
   try{
    const {jsPDF}=await import('jspdf');
    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true}),pageWidth=doc.internal.pageSize.getWidth(),margin=16,contentWidth=pageWidth-margin*2,today=new Date(),validUntil=new Date(today);validUntil.setDate(validUntil.getDate()+7);
-   const logoUrl=new URL(`${import.meta.env.BASE_URL}brand/Logo_Otimizada_Preta.png`,window.location.origin).href,logo=await loadPdfImage(logoUrl);
+   const logo=await loadPdfBrandLogo();
    const header=()=>{if(logo){const size=25,ratio=Math.min(size/logo.width,size/logo.height),width=logo.width*ratio,height=logo.height*ratio;doc.addImage(logo.data,'JPEG',margin+(size-width)/2,13+(size-height)/2,width,height,undefined,'FAST')}doc.setTextColor(23,52,65);doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('ORÇAMENTO',margin+32,21);doc.setFontSize(11);doc.text('Sonho em Camadas 3D',margin+32,28);doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(86,101,115);doc.text('Ideias que ganham forma',margin+32,33);doc.setDrawColor(181,138,42);doc.setLineWidth(.7);doc.line(margin,42,pageWidth-margin,42)};
    header();doc.setFontSize(9);doc.setTextColor(86,101,115);doc.text(`Emitido em: ${today.toLocaleDateString('pt-BR')}`,margin,51);doc.text(`Válido até: ${validUntil.toLocaleDateString('pt-BR')}`,pageWidth-margin,51,{align:'right'});
    const quoteSeller=sellers.find(item=>item.id===form.vendedor_cadastro_id)?.nome||editingOrder?.vendedor_nome||'Sem vendedor';

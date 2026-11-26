@@ -1,4 +1,5 @@
 import type {jsPDF} from 'jspdf';
+import type {PdfImage} from './pdf-image';
 
 export type ReceiptPayment={
  id:string;
@@ -20,16 +21,24 @@ export function receiptablePayments(payments:ReceiptPayment[]){
   .sort((a,b)=>b.data_movimentacao.localeCompare(a.data_movimentacao)||a.id.localeCompare(b.id));
 }
 
-export function renderOrderReceipt(doc:jsPDF,order:{numero:number;cliente_nome:string},payment:ReceiptPayment){
+export function renderOrderReceipt(doc:jsPDF,order:{numero:number;cliente_nome:string},payment:ReceiptPayment,logo:PdfImage|null){
  const margin=18;
  const width=doc.internal.pageSize.getWidth()-margin*2;
+ let titleX=margin;
+ if(logo){
+  const logoSize=25;
+  const scale=logoSize/Math.max(logo.width,logo.height);
+  const logoWidth=logo.width*scale,logoHeight=logo.height*scale;
+  doc.addImage(logo.data,'JPEG',margin+(logoSize-logoWidth)/2,13+(logoSize-logoHeight)/2,logoWidth,logoHeight,undefined,'FAST');
+  titleX+=32;
+ }
  doc.setFont('helvetica','bold');
  doc.setFontSize(22);
  doc.setTextColor(23,52,65);
- doc.text('Recibo de pagamento',margin,29);
+ doc.text('Recibo de pagamento',titleX,26);
  doc.setFont('helvetica','normal');
  doc.setFontSize(11);
- doc.text('Sonho em Camadas 3D',margin,38);
+ doc.text('Sonho em Camadas 3D',titleX,34);
  doc.setDrawColor(181,138,42);
  doc.line(margin,44,margin+width,44);
 

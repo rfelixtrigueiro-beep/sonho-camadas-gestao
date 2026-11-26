@@ -3,6 +3,7 @@
 import {useState} from 'react';
 import {Download,ReceiptText} from 'lucide-react';
 import {supabase} from '@/lib/supabase';
+import {loadPdfBrandLogo} from '@/lib/pdf-image';
 import {receiptablePayments,receiptDate,receiptMoney,receiptOrderNumber,renderOrderReceipt,type ReceiptPayment} from '@/lib/order-receipt';
 
 type Props={order:{id:string;numero:number;cliente_nome:string};environment:string};
@@ -41,11 +42,11 @@ export default function OrderReceipts({order,environment}:Props){
   setBusy(true);
   setMessage('Preparando recibo…');
   try{
-   const [eligible,{jsPDF}]=await Promise.all([loadPayments(),import('jspdf')]);
+   const [eligible,{jsPDF},logo]=await Promise.all([loadPayments(),import('jspdf'),loadPdfBrandLogo()]);
    const payment=eligible.find(item=>item.id===paymentId);
    if(!payment){setMessage('Esse pagamento foi estornado ou não está mais disponível.');return}
    const doc=new jsPDF({unit:'mm',format:'a4',compress:true});
-   renderOrderReceipt(doc,order,payment);
+   renderOrderReceipt(doc,order,payment,logo);
    doc.save(`recibo-pedido-${receiptOrderNumber(order.numero)}-${payment.id.slice(0,8)}.pdf`);
    setMessage('Recibo em PDF gerado.');
   }catch{setMessage('Não foi possível gerar o recibo. Tente novamente.')}
