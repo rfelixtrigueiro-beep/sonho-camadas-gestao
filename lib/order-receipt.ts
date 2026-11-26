@@ -48,38 +48,8 @@ export function renderOrderReceipt(doc:jsPDF,order:ReceiptOrder,payment:ReceiptP
  doc.setDrawColor(181,138,42);
  doc.line(margin,44,margin+width,44);
 
- doc.setFillColor(237,245,244);
- doc.roundedRect(margin,54,width,30,2,2,'F');
- doc.setFontSize(10);
- doc.text('Valor recebido neste pagamento',margin+6,64);
- doc.setFont('helvetica','bold');
- doc.setFontSize(20);
- doc.text(receiptMoney.format(Number(payment.valor)),margin+6,77);
-
- const fields=[
-  ['Recebido de',order.cliente_nome],
-  ['Referente ao pedido',`#${receiptOrderNumber(order.numero)}`],
-  ['Data do pagamento',receiptDate(payment.data_movimentacao)],
-  ['Forma de pagamento',payment.forma_pagamento],
-  ['Referência do pagamento',payment.id],
- ];
- let y=101;
- for(const [label,value] of fields){
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(10);
-  doc.text(label,margin,y);
-  doc.setFont('helvetica','normal');
-  doc.setFontSize(11);
-  const lines=doc.splitTextToSize(value,width) as string[];
-  doc.text(lines,margin,y+6);
-  y+=15+(lines.length-1)*5;
- }
- doc.setFontSize(9);
- doc.text('Este recibo confirma o pagamento acima para o pedido indicado.',margin,y+4);
- if(!order.items.length)return;
-
  const bottom=doc.internal.pageSize.getHeight()-18;
- y+=17;
+ let y=55;
  function itemHeader(continued=false){
   doc.setFont('helvetica','bold');
   doc.setFontSize(11);
@@ -98,8 +68,7 @@ export function renderOrderReceipt(doc:jsPDF,order:ReceiptOrder,payment:ReceiptP
   doc.setTextColor(23,52,65);
  }
 
- if(y+24>bottom){doc.addPage();y=21;}
- itemHeader();
+ if(order.items.length)itemHeader();
  for(const item of order.items){
   const lines=doc.splitTextToSize(item.produto_nome,width-28) as string[];
   let rowOffset=0;
@@ -115,4 +84,35 @@ export function renderOrderReceipt(doc:jsPDF,order:ReceiptOrder,payment:ReceiptP
    y+=rowHeight;
   }
  }
+ if(order.items.length)y+=10;
+ doc.setFont('helvetica','normal');
+ doc.setFontSize(11);
+ const fields=[
+  ['Recebido de',order.cliente_nome],
+  ['Referente ao pedido',`#${receiptOrderNumber(order.numero)}`],
+  ['Data do pagamento',receiptDate(payment.data_movimentacao)],
+  ['Forma de pagamento',payment.forma_pagamento],
+  ['Referência do pagamento',payment.id],
+ ].map(([label,value])=>({label,lines:doc.splitTextToSize(value,width) as string[]}));
+ const paymentBlockHeight=51+fields.reduce((height,{lines})=>height+15+(lines.length-1)*5,0);
+ if(y+paymentBlockHeight>bottom){doc.addPage();y=21;}
+ doc.setFillColor(237,245,244);
+ doc.roundedRect(margin,y,width,30,2,2,'F');
+ doc.setFontSize(10);
+ doc.text('Valor recebido neste pagamento',margin+6,y+10);
+ doc.setFont('helvetica','bold');
+ doc.setFontSize(20);
+ doc.text(receiptMoney.format(Number(payment.valor)),margin+6,y+23);
+ y+=47;
+ for(const {label,lines} of fields){
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(10);
+  doc.text(label,margin,y);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(11);
+  doc.text(lines,margin,y+6);
+  y+=15+(lines.length-1)*5;
+ }
+ doc.setFontSize(9);
+ doc.text('Este recibo confirma o pagamento acima para o pedido indicado.',margin,y+4);
 }
